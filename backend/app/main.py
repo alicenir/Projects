@@ -30,7 +30,8 @@ app.add_middleware(
 UPLOAD_DIR = Path("/app/uploads")
 UPLOAD_DIR.mkdir(parents=True, exist_ok=True)
 
-CONFIG_FILE = Path("/app/connector_configs.json")
+CONFIG_FILE = Path("/app/configs/connector_configs.json")
+CONFIG_FILE.parent.mkdir(parents=True, exist_ok=True)
 
 _connector_configs: Dict[str, Dict] = {}
 _connector_instructions: Dict[str, str] = {}

@@ -13,7 +13,8 @@ services:
       - .env
     volumes:
       - ./backend:/app
-      - uploads_data:/app/uploads
+      - ./data/uploads:/app/uploads
+      - ./data/configs:/app/configs
     networks:
       - secops-net
     healthcheck:
@@ -38,6 +39,3 @@ services:
 networks:
   secops-net:
     driver: bridge
-
-volumes:
-  uploads_data:
