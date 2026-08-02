@@ -1,7 +1,6 @@
 node_modules
 dist
 dist-ssr
-wraps
 *.local
 .DS_Store
 *.tsbuildinfo

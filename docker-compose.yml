@@ -9,8 +9,4 @@ services:
     # "Environment variables" box on the stack, without editing this file.
     ports:
       - "${WRAP_PORT:-8095}:3000"
-    volumes:
-      # Generated wraps you choose to save land here, readable from any device
-      # on your network. Override with WRAPS_PATH the same way as the port.
-      - "${WRAPS_PATH:-/share/Docker/tesla-wrap-studio/wraps}:/app/wraps"
     restart: unless-stopped

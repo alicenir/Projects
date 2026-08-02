@@ -26,8 +26,7 @@ Not affiliated with or endorsed by Tesla, Inc.
    and generates it immediately — for when you just want something great without
    writing the brief yourself.
 5. **Preview window** shows Tesla's official blank template next to your generated
-   result, and lets you download it as a spec-compliant PNG — or save it to a folder
-   on your NAS if you're running the Docker/server setup (see below).
+   result, and lets you download it as a spec-compliant PNG.
 
 ## How generation actually works
 
@@ -84,27 +83,6 @@ npm run build
 Type-checks with `tsc` and produces a static `dist/` bundle via Vite — deployable to
 any static host, as long as you keep the API-key caveat above in mind.
 
-## The wrap library (optional)
-
-When the app is run with its bundled server (which is how the Docker image runs it),
-a **Save to NAS** button appears next to Download, and saved wraps show up in a
-gallery at the bottom of the page with previews, download links, and delete buttons.
-
-Files are written as plain PNGs to whatever folder is mounted at `/app/wraps`, so
-they're normal files you can reach over SMB — generate wraps on your phone, then copy
-them to a USB drive from a computer later.
-
-This is entirely optional. Served as a plain static build with no backend (`npm run
-dev`, or any static host), the app detects the missing API, hides the library and the
-Save button, and works exactly as before with browser downloads.
-
-The API itself is small: `GET/POST /api/wraps`, `GET/DELETE /api/wraps/:name`.
-Filenames are validated against the Tesla spec (alphanumerics, spaces, dashes,
-underscores, max 30 chars, `.png`), which also makes path traversal impossible, and
-uploads are checked for a real PNG signature rather than a trusted MIME type. There is
-**no authentication** — it assumes a trusted LAN, so don't expose the port to the
-internet.
-
 ## Running with Docker
 
 If you'd rather not install Node at all:
@@ -115,18 +93,17 @@ docker compose up -d --build
 
 Then open `http://localhost:8095`.
 
-The host port and the wraps folder are both configurable without editing
-`docker-compose.yml` — copy `.env.example` to `.env` and set `WRAP_PORT` /
-`WRAPS_PATH`, or pass them inline:
+The host port is configurable without editing `docker-compose.yml` — copy
+`.env.example` to `.env` and set `WRAP_PORT`, or pass it inline:
 
 ```bash
 WRAP_PORT=9137 docker compose up -d --build
 ```
 
 Two-stage build: `node:22-alpine` compiles the bundle, then the runtime image installs
-production dependencies only (no Vite, no TypeScript) and runs Express to serve both
-the built app and the wrap-library API. Both stages are multi-arch, so this works on
-x86 and ARM alike — most NAS hardware, Raspberry Pi, Apple Silicon.
+production dependencies only (no Vite, no TypeScript) and runs a small Express server
+to serve the built app. Both stages are multi-arch, so this works on x86 and ARM alike
+— most NAS hardware, Raspberry Pi, Apple Silicon.
 
 No build-time configuration or secrets are needed. Your Gemini key is entered in the
 browser at runtime and stored in that browser's `localStorage`; it is never sent to,
@@ -143,19 +120,14 @@ proxied by, or stored on the server.
 5. If the repository is private, switch on **Authentication** and use your GitHub
    username with a [personal access token](https://github.com/settings/tokens) (scope
    `repo`) as the password. A normal account password will not work.
-6. In the **Environment variables** box, set these to match your NAS — no file editing
-   needed:
-
-   | Name | Value |
-   | --- | --- |
-   | `WRAP_PORT` | any free port, e.g. `8095` |
-   | `WRAPS_PATH` | QNAP `/share/Docker/tesla-wrap-studio/wraps` · Synology `/volume1/docker/tesla-wrap-studio/wraps` · Unraid `/mnt/user/appdata/tesla-wrap-studio/wraps` |
-
+6. Optionally set `WRAP_PORT` in the **Environment variables** box to any free port
+   (defaults to `8095`) — no file editing needed.
 7. Click **Deploy the stack**. The first deploy compiles the bundle, so expect a few
    minutes on slower NAS hardware; later deploys reuse cached layers.
 
-The app is then reachable at `http://<nas-ip>:<WRAP_PORT>`, and saved wraps appear in
-the folder you mounted.
+The app is then reachable at `http://<nas-ip>:<WRAP_PORT>`. Note that's your NAS's own
+IP — not the container IP Portainer shows in its container list, which is on Docker's
+internal network and unreachable from the rest of your LAN.
 
 If the deploy fails with a port-allocation error, that port is already in use — pick
 another and redeploy. To see what's taken, SSH into the NAS and run
@@ -180,5 +152,4 @@ npm run server         # terminal 1 — API on :3000
 npm run dev            # terminal 2 — UI on :5173, proxies /api to :3000
 ```
 
-Set `WRAPS_DIR` to control where wraps are written (defaults to `./wraps`), and `PORT`
-to change the listening port.
+Set `PORT` to change the listening port (defaults to `3000`).

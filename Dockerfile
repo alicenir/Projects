@@ -16,7 +16,6 @@ FROM node:22-alpine
 WORKDIR /app
 ENV NODE_ENV=production
 ENV PORT=3000
-ENV WRAPS_DIR=/app/wraps
 
 # Production dependencies only — no Vite or TypeScript in the runtime image.
 COPY package.json package-lock.json ./
@@ -24,8 +23,6 @@ RUN npm ci --omit=dev && npm cache clean --force
 
 COPY server ./server
 COPY --from=build /app/dist ./dist
-
-RUN mkdir -p /app/wraps
 
 EXPOSE 3000
 

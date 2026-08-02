@@ -12,8 +12,6 @@ import { buildWrapPrompt, buildConceptPrompt } from './lib/promptBuilder'
 import { generateWrapImage, generateConceptText } from './lib/gemini'
 import { normalizeToWrapSpec, sanitizeWrapFilename } from './lib/imageSpec'
 import { fetchImageAsset, type FetchedImage } from './lib/templateAssets'
-import { WrapLibrary } from './components/WrapLibrary'
-import { isLibraryAvailable, listWraps, saveWrap, deleteWrap, type SavedWrap } from './lib/wrapLibrary'
 import type { WrapGenerationState } from './types'
 
 const LS_KEY = 'tesla-wrap-studio:v2'
@@ -57,38 +55,12 @@ export default function App() {
   const [generation, setGeneration] = useState<WrapGenerationState>({ status: 'idle' })
   const [templateUrl, setTemplateUrl] = useState<string | null>(null)
   const [templateError, setTemplateError] = useState<string | null>(null)
-  const [libraryAvailable, setLibraryAvailable] = useState(false)
-  const [savedWraps, setSavedWraps] = useState<SavedWrap[]>([])
-  const [libraryError, setLibraryError] = useState<string | null>(null)
-  const [saveStatus, setSaveStatus] = useState<'idle' | 'saving' | 'saved'>('idle')
 
   const templateCache = useRef<Map<string, FetchedImage>>(new Map())
 
   useEffect(() => {
     localStorage.setItem(LS_KEY, JSON.stringify(prefs))
   }, [prefs])
-
-  // The library backend is optional — probe once and hide that section if absent.
-  useEffect(() => {
-    let cancelled = false
-    isLibraryAvailable().then((available) => {
-      if (cancelled || !available) return
-      setLibraryAvailable(true)
-      refreshLibrary()
-    })
-    return () => {
-      cancelled = true
-    }
-  }, [])
-
-  async function refreshLibrary() {
-    try {
-      setSavedWraps(await listWraps())
-      setLibraryError(null)
-    } catch (err) {
-      setLibraryError(err instanceof Error ? err.message : 'Could not load the wrap library.')
-    }
-  }
 
   const model = TESLA_MODELS.find((m) => m.id === prefs.modelId)!
   const selectedColor = TESLA_COLORS.find((c) => c.id === prefs.colorId)!
@@ -182,39 +154,13 @@ export default function App() {
     }
   }
 
-  function wrapFilename() {
-    return sanitizeWrapFilename(`${model.name}_wrap`.replace(/\s+/g, '_'))
-  }
-
   function handleDownload() {
     if (!generation.dataUrl) return
+    const filename = sanitizeWrapFilename(`${model.name}_wrap`.replace(/\s+/g, '_'))
     const a = document.createElement('a')
     a.href = generation.dataUrl
-    a.download = `${wrapFilename()}.png`
+    a.download = `${filename}.png`
     a.click()
-  }
-
-  async function handleSaveToNas() {
-    if (!generation.dataUrl) return
-    setSaveStatus('saving')
-    try {
-      await saveWrap(`${wrapFilename()}.png`, generation.dataUrl)
-      await refreshLibrary()
-      setSaveStatus('saved')
-      setTimeout(() => setSaveStatus('idle'), 2000)
-    } catch (err) {
-      setLibraryError(err instanceof Error ? err.message : 'Could not save the wrap.')
-      setSaveStatus('idle')
-    }
-  }
-
-  async function handleDeleteWrap(name: string) {
-    try {
-      await deleteWrap(name)
-      await refreshLibrary()
-    } catch (err) {
-      setLibraryError(err instanceof Error ? err.message : 'Could not delete the wrap.')
-    }
   }
 
   return (
@@ -264,17 +210,10 @@ export default function App() {
           state={generation}
           canGenerate={canGenerate}
           hasDescription={hasDescription}
-          libraryAvailable={libraryAvailable}
-          saveStatus={saveStatus}
           onGenerate={handleGenerate}
           onAiWrapGeneration={handleAiWrapGeneration}
           onDownload={handleDownload}
-          onSaveToNas={handleSaveToNas}
         />
-
-        {libraryAvailable && (
-          <WrapLibrary wraps={savedWraps} error={libraryError} onDelete={handleDeleteWrap} />
-        )}
 
         {!canGenerate && !templateError && (
           <p className="hint center">Add your API key above to enable generation.</p>
