@@ -82,3 +82,44 @@ npm run build
 
 Type-checks with `tsc` and produces a static `dist/` bundle via Vite — deployable to
 any static host, as long as you keep the API-key caveat above in mind.
+
+## Running with Docker
+
+If you'd rather not install Node at all, the included `Dockerfile` builds the app and
+serves the result with nginx:
+
+```bash
+docker compose up -d --build
+```
+
+Then open `http://localhost:8088`. Change the left-hand port in `docker-compose.yml`
+if 8088 is already in use.
+
+The image is a two-stage build: `node:22-alpine` compiles the bundle, then only the
+static output is copied into `nginx:alpine`, so the running container has no Node or
+source code in it. Both base images are multi-arch, so this works on x86 and ARM
+(including most NAS hardware and Apple Silicon).
+
+Nothing needs to be configured at build time — no environment variables, no secrets,
+no API key. The container serves static files only; your Gemini key is entered in the
+browser at runtime and stored in that browser's `localStorage`.
+
+### Deploying on a NAS with Portainer
+
+1. In Portainer, go to **Stacks → Add stack**, name it `tesla-wrap-studio`, and choose
+   **Repository** as the build method.
+2. **Repository URL**: `https://github.com/<your-user>/<your-repo>`
+3. **Repository reference**: `refs/heads/<your-branch>` — Portainer wants the full ref,
+   not just the branch name.
+4. **Compose path**: `docker-compose.yml`
+5. If the repository is private, switch on **Authentication** and use your GitHub
+   username with a [personal access token](https://github.com/settings/tokens) (scope
+   `repo`) as the password. A normal account password will not work.
+6. Click **Deploy the stack**. The first deploy compiles the bundle, so expect a few
+   minutes on slower NAS hardware; later deploys reuse cached layers.
+
+The app is then reachable at `http://<nas-ip>:8088`. Because everything runs in the
+browser and talks to Google directly, the NAS only ever serves static files — it never
+sees or proxies your API key.
+
+To pick up later changes, open the stack in Portainer and use **Pull and redeploy**.

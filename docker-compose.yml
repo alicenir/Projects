@@ -1,0 +1,11 @@
+services:
+  tesla-wrap-studio:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    image: tesla-wrap-studio:latest
+    container_name: tesla-wrap-studio
+    # Change the left-hand number if 8088 is already taken on your NAS.
+    ports:
+      - "8088:80"
+    restart: unless-stopped
