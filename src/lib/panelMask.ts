@@ -23,6 +23,67 @@ export interface MaskedResult {
   dataUrl: string
   /** Fraction of the canvas that ended up as paintable panel area (diagnostics). */
   panelRatio: number
+  /** Panels big enough to matter that came back essentially unpainted. */
+  blankPanels: number
+}
+
+/** A pixel this pale counts as "unpainted" when judging whether a panel was skipped. */
+const NEAR_WHITE = 236
+/** Ignore slivers — only panels at least this fraction of the canvas are judged. */
+const SIGNIFICANT_PANEL = 0.004
+/** Above this share of near-white pixels, a panel is treated as left blank. */
+const BLANK_THRESHOLD = 0.9
+
+/**
+ * Labels each connected panel interior and counts how many significant ones came
+ * back essentially white. The image model intermittently skips a panel — most
+ * often the large hood — and this makes that detectable instead of something the
+ * user has to notice by eye.
+ */
+function countBlankPanels(
+  width: number,
+  height: number,
+  paintable: Uint8Array,
+  art: Uint8ClampedArray,
+): number {
+  const seen = new Uint8Array(width * height)
+  const minArea = width * height * SIGNIFICANT_PANEL
+  let blank = 0
+
+  for (let start = 0; start < paintable.length; start++) {
+    if (!paintable[start] || seen[start]) continue
+
+    const stack = [start]
+    seen[start] = 1
+    let area = 0
+    let pale = 0
+
+    while (stack.length) {
+      const p = stack.pop()!
+      area++
+      const i = p * 4
+      if (art[i] > NEAR_WHITE && art[i + 1] > NEAR_WHITE && art[i + 2] > NEAR_WHITE) pale++
+
+      const x = p % width
+      const y = (p - x) / width
+      const neighbours = [
+        x + 1 < width ? p + 1 : -1,
+        x - 1 >= 0 ? p - 1 : -1,
+        y + 1 < height ? p + width : -1,
+        y - 1 >= 0 ? p - width : -1,
+      ]
+      for (const n of neighbours) {
+        if (n >= 0 && paintable[n] && !seen[n]) {
+          seen[n] = 1
+          stack.push(n)
+        }
+      }
+    }
+
+    if (area >= minArea && pale / area > BLANK_THRESHOLD) blank++
+  }
+
+  return blank
 }
 
 function loadImage(src: string): Promise<HTMLImageElement> {
@@ -120,18 +181,23 @@ export async function maskToPanels(generatedDataUrl: string, templateDataUrl: st
   // the outlines are panel gaps on the real car, which is how Tesla's own examples
   // render them.
   let panelPixels = 0
+  const paintable = new Uint8Array(outside.length)
   for (let p = 0, i = 0; p < outside.length; p++, i += 4) {
     if (outside[p] || isOutline[p]) {
       artData.data[i + 3] = 0
     } else {
       artData.data[i + 3] = 255
+      paintable[p] = 1
       panelPixels++
     }
   }
+
+  const blankPanels = countBlankPanels(width, height, paintable, artData.data)
   artCtx.putImageData(artData, 0, 0)
 
   return {
     dataUrl: artCanvas.toDataURL('image/png'),
     panelRatio: panelPixels / (width * height),
+    blankPanels,
   }
 }

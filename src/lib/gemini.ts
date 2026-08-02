@@ -64,11 +64,14 @@ export async function generateWrapImage(
   }
 }
 
-const CONCEPT_TEXT_MODEL = 'gemini-2.5-flash'
-
-/** Asks a fast Gemini text model to invent a short creative wrap concept (used by "AI Wrap Generation"). */
-export async function generateConceptText(apiKey: string, prompt: string, signal?: AbortSignal): Promise<string> {
-  const data = await callGenerateContent(apiKey, CONCEPT_TEXT_MODEL, [{ text: prompt }], ['TEXT'], signal)
+/** Asks a Gemini text model to invent a short creative wrap concept (used by "AI Wrap Generation"). */
+export async function generateConceptText(
+  apiKey: string,
+  modelId: string,
+  prompt: string,
+  signal?: AbortSignal,
+): Promise<string> {
+  const data = await callGenerateContent(apiKey, modelId, [{ text: prompt }], ['TEXT'], signal)
   const resultParts: Array<{ text?: string }> = data?.candidates?.[0]?.content?.parts ?? []
   const text = resultParts.map((p) => p.text ?? '').join('').trim()
   if (!text) throw new Error('The model did not return a concept. Try again.')
@@ -107,6 +110,11 @@ async function callGenerateContent(
 
     if (res.status === 429) {
       throw new Error(explainQuotaError(modelId, detail))
+    }
+    if (res.status === 404 && /no longer available|not found|not supported/i.test(detail)) {
+      throw new Error(
+        `Google has retired "${modelId}", so this request was rejected. Pick a different model in the dropdown at the top — if they're all failing, Google has moved on and the model list in src/data/geminiModels.ts needs updating.`,
+      )
     }
     if (res.status === 400 && /api key/i.test(detail)) {
       throw new Error('That API key was rejected. Check it was copied in full from aistudio.google.com/apikey.')

@@ -42,15 +42,13 @@ export function buildWrapPrompt(input: WrapPromptInput): string {
 
     'This template is a flat layout of MANY separate body panels spread across the canvas: a large hood panel, long door panels down the left and right sides, front and rear fenders, narrow pillar strips, and several bumper and valance pieces along the top and bottom.',
 
-    'CRITICAL — FILL EVERY PANEL. Every single closed outline in the template must be filled with artwork, edge to edge, corner to corner. Do not paint one panel and leave the others blank. Do not leave any outlined panel white, empty, or showing only its outline. The doors, fenders, bumpers, pillars and hood must ALL be covered. A result where only one panel is painted is a complete failure.',
+    'CRITICAL — LEAVE NOTHING WHITE. Cover the ENTIRE image with your artwork, edge to edge and corner to corner, including the large panel near the top centre (the hood/frunk), every door, fender, pillar and bumper piece, and the space between them. There must be no white, blank, empty or unpainted area anywhere in your output. A white or empty region — especially the large hood panel — is a complete failure.',
 
-    'Do NOT paint the large empty region in the middle of the canvas that has no outline around it — that gap is the panoramic glass roof and must stay pure white, exactly as it is in the input. Likewise, the white background between and around the panel outlines stays pure white. Only fill the interiors of the printed outlines.',
-
-    'Keep every outline, panel boundary, cutout and position pixel-for-pixel identical to the input. Do not redraw, move, resize, warp, merge or add panel shapes.',
+    'Do not worry about staying inside the printed outlines and do not try to leave the glass roof empty: the areas that must not be wrapped are cut out automatically after you finish. Your only job is to produce a complete, edge-to-edge design with no blank space. Use the printed outlines purely as a guide to where the panels sit so the composition lines up with them.',
 
     `Design brief: ${trimmedDescription || 'An eye-catching, high-quality automotive wrap design.'}`,
 
-    'Treat the brief as a single design flowing across the whole vehicle. Put the main focal subject — the character, creature, logo or hero element — on the large hood panel. Every other panel continues the same world: scenery, patterns, textures, colour gradients, secondary motifs. Nothing is left plain unless the style genuinely calls for a block of flat colour.',
+    'Treat the brief as a single design flowing across the whole image. Place the main focal subject — the character, creature, logo or hero element — over the large panel near the top centre, which is the hood, and make sure that panel is richly painted rather than left as background. The rest of the image continues the same world: scenery, patterns, textures, colour gradients, secondary motifs.',
 
     INTENSITY_COPY[input.intensity],
 

@@ -7,7 +7,7 @@ import { WrapPreview } from './components/WrapPreview'
 import { TESLA_MODELS } from './data/models'
 import { TESLA_COLORS } from './data/colors'
 import { type WrapIntensity } from './data/themes'
-import { GEMINI_IMAGE_MODELS } from './data/geminiModels'
+import { GEMINI_IMAGE_MODELS, GEMINI_TEXT_MODELS } from './data/geminiModels'
 import { buildWrapPrompt, buildConceptPrompt } from './lib/promptBuilder'
 import { generateWrapImage, generateConceptText } from './lib/gemini'
 import { normalizeToWrapSpec, sanitizeWrapFilename } from './lib/imageSpec'
@@ -17,9 +17,13 @@ import type { WrapGenerationState } from './types'
 
 const LS_KEY = 'tesla-wrap-studio:v2'
 
+const BLANK_PANEL_CORRECTION =
+  'RETRY — your previous attempt left an entire panel white and unpainted, most likely the large hood panel near the top centre. Paint over EVERY part of the image this time, especially that large top-centre panel. No region of the output may be white, blank or unpainted.'
+
 interface PersistedPrefs {
   apiKey: string
   geminiModelId: string
+  geminiTextModelId: string
   modelId: string
   colorId: string
   customHex: string
@@ -31,7 +35,18 @@ interface PersistedPrefs {
 function loadPrefs(): PersistedPrefs {
   try {
     const raw = localStorage.getItem(LS_KEY)
-    if (raw) return { ...defaultPrefs(), ...JSON.parse(raw) }
+    if (raw) {
+      const stored: PersistedPrefs = { ...defaultPrefs(), ...JSON.parse(raw) }
+      // A model saved earlier may since have been retired by Google — fall back
+      // rather than leaving the user stuck on an id that only 404s.
+      if (!GEMINI_IMAGE_MODELS.some((m) => m.id === stored.geminiModelId)) {
+        stored.geminiModelId = GEMINI_IMAGE_MODELS[0].id
+      }
+      if (!GEMINI_TEXT_MODELS.some((m) => m.id === stored.geminiTextModelId)) {
+        stored.geminiTextModelId = GEMINI_TEXT_MODELS[0].id
+      }
+      return stored
+    }
   } catch {
     // ignore corrupt storage
   }
@@ -42,6 +57,7 @@ function defaultPrefs(): PersistedPrefs {
   return {
     apiKey: '',
     geminiModelId: GEMINI_IMAGE_MODELS[0].id,
+    geminiTextModelId: GEMINI_TEXT_MODELS[0].id,
     modelId: TESLA_MODELS[0].id,
     colorId: TESLA_COLORS[0].id,
     customHex: '#8A8D90',
@@ -99,6 +115,16 @@ export default function App() {
   const canGenerate = prefs.apiKey.trim().length > 0 && Boolean(templateUrl) && !templateError
   const hasDescription = prefs.description.trim().length > 0
 
+  async function generateAndMask(prompt: string, template: FetchedImage) {
+    const raw = await generateWrapImage(prefs.apiKey.trim(), prefs.geminiModelId, prompt, {
+      base64: template.base64,
+      mimeType: template.mimeType,
+    })
+    // Clip to the template's real panels so nothing can land on the glass roof or
+    // the background, whatever the model actually drew.
+    return maskToPanels(raw.dataUrl, template.objectUrl)
+  }
+
   async function runImageGeneration(description: string) {
     const template = templateCache.current.get(model.id)
     if (!template) {
@@ -108,7 +134,7 @@ export default function App() {
 
     setGeneration({ status: 'loading-image' })
     try {
-      const prompt = buildWrapPrompt({
+      const basePrompt = buildWrapPrompt({
         model,
         colorHex,
         colorName,
@@ -116,13 +142,14 @@ export default function App() {
         intensity: prefs.intensity,
       })
 
-      const raw = await generateWrapImage(prefs.apiKey.trim(), prefs.geminiModelId, prompt, {
-        base64: template.base64,
-        mimeType: template.mimeType,
-      })
-      // Clip the result to the template's real panels so nothing can land on the
-      // glass roof or the background, whatever the model actually drew.
-      const masked = await maskToPanels(raw.dataUrl, template.objectUrl)
+      // The model intermittently leaves a whole panel — usually the hood — unpainted.
+      // Detect that after masking and retry once with a pointed correction rather
+      // than handing back a wrap with a white frunk.
+      let masked = await generateAndMask(basePrompt, template)
+      if (masked.blankPanels > 0) {
+        masked = await generateAndMask(`${basePrompt} ${BLANK_PANEL_CORRECTION}`, template)
+      }
+
       const normalized = await normalizeToWrapSpec(masked.dataUrl, template.width, template.height)
 
       setGeneration({
@@ -150,7 +177,7 @@ export default function App() {
         colorName,
         themeHint: prefs.description.trim() || undefined,
       })
-      const concept = await generateConceptText(prefs.apiKey.trim(), conceptPrompt)
+      const concept = await generateConceptText(prefs.apiKey.trim(), prefs.geminiTextModelId, conceptPrompt)
       setPrefs((p) => ({ ...p, description: concept }))
       await runImageGeneration(concept)
     } catch (err) {
@@ -186,6 +213,8 @@ export default function App() {
           onApiKeyChange={(apiKey) => setPrefs((p) => ({ ...p, apiKey }))}
           modelId={prefs.geminiModelId}
           onModelChange={(geminiModelId) => setPrefs((p) => ({ ...p, geminiModelId }))}
+          textModelId={prefs.geminiTextModelId}
+          onTextModelChange={(geminiTextModelId) => setPrefs((p) => ({ ...p, geminiTextModelId }))}
         />
 
         <ModelSelector selectedId={prefs.modelId} onSelect={(modelId) => setPrefs((p) => ({ ...p, modelId }))} />

@@ -9,6 +9,34 @@ export interface GeminiImageModel {
   note?: string
 }
 
+export interface GeminiTextModel {
+  id: string
+  label: string
+  description: string
+}
+
+/**
+ * Text models used by "AI Wrap Generation" to invent a concept.
+ *
+ * Kept as a user-visible list rather than a hardcoded constant: the previous
+ * hardcoded gemini-2.5-flash started returning 404 "no longer available to new
+ * users" when Google retired it, which silently broke the button. Selecting the
+ * model also means the call runs on whatever account tier you've chosen instead
+ * of a fixed default.
+ */
+export const GEMINI_TEXT_MODELS: GeminiTextModel[] = [
+  {
+    id: 'gemini-3.6-flash',
+    label: 'Gemini 3.6 Flash',
+    description: 'gemini-3.6-flash — current general-purpose Flash model',
+  },
+  {
+    id: 'gemini-3.5-flash-lite',
+    label: 'Gemini 3.5 Flash-Lite',
+    description: 'gemini-3.5-flash-lite — cheapest and fastest',
+  },
+]
+
 /** Gemini image-generation models reachable via generateContent + responseModalities: ["IMAGE"]. */
 export const GEMINI_IMAGE_MODELS: GeminiImageModel[] = [
   {

@@ -1,14 +1,23 @@
 import { useState } from 'react'
-import { GEMINI_IMAGE_MODELS } from '../data/geminiModels'
+import { GEMINI_IMAGE_MODELS, GEMINI_TEXT_MODELS } from '../data/geminiModels'
 
 interface Props {
   apiKey: string
   onApiKeyChange: (key: string) => void
   modelId: string
   onModelChange: (id: string) => void
+  textModelId: string
+  onTextModelChange: (id: string) => void
 }
 
-export function ApiKeyInput({ apiKey, onApiKeyChange, modelId, onModelChange }: Props) {
+export function ApiKeyInput({
+  apiKey,
+  onApiKeyChange,
+  modelId,
+  onModelChange,
+  textModelId,
+  onTextModelChange,
+}: Props) {
   const [reveal, setReveal] = useState(false)
   const selectedModel = GEMINI_IMAGE_MODELS.find((m) => m.id === modelId)
 
@@ -49,6 +58,16 @@ export function ApiKeyInput({ apiKey, onApiKeyChange, modelId, onModelChange }: 
             ))}
           </select>
           {selectedModel?.note && <span className="model-note">⚠ {selectedModel.note}</span>}
+        </label>
+        <label className="field">
+          <span>Concept model (AI Wrap Generation)</span>
+          <select value={textModelId} onChange={(e) => onTextModelChange(e.target.value)}>
+            {GEMINI_TEXT_MODELS.map((m) => (
+              <option key={m.id} value={m.id} title={m.description}>
+                {m.label}
+              </option>
+            ))}
+          </select>
         </label>
       </div>
     </section>
