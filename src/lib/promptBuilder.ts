@@ -84,11 +84,18 @@ export interface MockupPromptInput {
  */
 export function buildMockupPrompt(input: MockupPromptInput): string {
   return [
-    `Render a photorealistic studio image of a Tesla ${input.model.name}${input.model.subtitle ? ` (${input.model.subtitle})` : ''} with the supplied artwork applied as a printed vinyl wrap on its bodywork.`,
-    'The supplied image is the flattened wrap layout for this exact vehicle: the large panel near the top centre is the hood, the tall panels down each side are the doors and fenders, and the pieces along the top and bottom are the bumpers. Map that artwork onto the matching panels, preserving its colours, motifs, characters and overall composition so the car is clearly wearing this specific design.',
-    'The subject on the hood must read the right way up and face forward when viewed from the front of the car.',
-    'Show the whole car in a three-quarter front view, wheels included, lit like a showroom photograph on a clean neutral studio background with a soft floor reflection.',
+    `You are given two images. The FIRST is a flattened vinyl wrap layout. The SECOND is a reference render of the exact vehicle it belongs to: a Tesla ${input.model.name}${input.model.subtitle ? ` (${input.model.subtitle})` : ''}.`,
+
+    'Render a photorealistic studio photograph of the car shown in the SECOND image, wearing the artwork from the FIRST image as a printed vinyl wrap.',
+
+    'Match the vehicle in the second image exactly — its body shape, proportions, front and rear light signatures, bumpers, wheels and greenhouse. Tesla sells several generations that look quite different from each other, so reproduce the specific one shown rather than a generic or newer version of that nameplate.',
+
+    'In the wrap layout, the large panel near the top centre is the hood, the tall panels down each side are the doors and fenders, and the pieces along the top and bottom are the bumpers. Map that artwork onto the matching panels, preserving its colours, motifs, characters and composition so the car is clearly wearing this specific design, with the hood subject upright and facing forward.',
+
+    'Keep the reference render\'s three-quarter front angle, wheels included, lit like a showroom photograph on a clean neutral background with a soft floor reflection.',
+
     'The panoramic roof is tinted glass and must stay dark glass — never wrapped or painted. Windows stay glass, and the tyres, badges and lights stay realistic.',
+
     'No text overlays, no watermarks, no colour swatches or design-layout diagrams — just the finished car.',
   ].join(' ')
 }

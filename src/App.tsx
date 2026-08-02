@@ -78,6 +78,7 @@ export default function App() {
 
   const templateCache = useRef<Map<string, FetchedImage>>(new Map())
   const hoodCache = useRef<Map<string, HoodPanel | null>>(new Map())
+  const vehicleCache = useRef<Map<string, FetchedImage>>(new Map())
 
   useEffect(() => {
     localStorage.setItem(LS_KEY, JSON.stringify(prefs))
@@ -120,10 +121,9 @@ export default function App() {
   const hasDescription = prefs.description.trim().length > 0
 
   async function generateAndMask(prompt: string, template: FetchedImage) {
-    const raw = await generateWrapImage(prefs.apiKey.trim(), prefs.geminiModelId, prompt, {
-      base64: template.base64,
-      mimeType: template.mimeType,
-    })
+    const raw = await generateWrapImage(prefs.apiKey.trim(), prefs.geminiModelId, prompt, [
+      { base64: template.base64, mimeType: template.mimeType },
+    ])
     // Clip to the template's real panels so nothing can land on the glass roof or
     // the background, whatever the model actually drew.
     const masked = await maskToPanels(raw.dataUrl, template.objectUrl)
@@ -242,11 +242,24 @@ export default function App() {
       // transparency, which the model would otherwise render as holes.
       const flattened = await flattenOnColor(generation.dataUrl, colorHex)
       const { base64, mimeType } = splitDataUrl(flattened)
+
+      // Tesla ships a render of each exact variant. Passing it as a reference is
+      // far more reliable than naming the model in text — "Model Y" alone doesn't
+      // distinguish the pre-2025 car from the 2025 refresh, which look nothing alike.
+      let vehicle = vehicleCache.current.get(model.id)
+      if (!vehicle) {
+        vehicle = await fetchImageAsset(model.vehicleImageUrl)
+        vehicleCache.current.set(model.id, vehicle)
+      }
+
       const result = await generateWrapImage(
         prefs.apiKey.trim(),
         prefs.geminiModelId,
         buildMockupPrompt({ model, colorName }),
-        { base64, mimeType },
+        [
+          { base64, mimeType },
+          { base64: vehicle.base64, mimeType: vehicle.mimeType },
+        ],
       )
       setMockup({ status: 'done', dataUrl: result.dataUrl })
     } catch (err) {

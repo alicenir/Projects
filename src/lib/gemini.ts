@@ -36,14 +36,14 @@ export async function generateWrapImage(
   apiKey: string,
   modelId: string,
   prompt: string,
-  inputImage?: InputImage,
+  inputImages: InputImage[] = [],
   signal?: AbortSignal,
 ): Promise<GeminiImageResult> {
   const parts: Array<{ text: string } | { inlineData: { mimeType: string; data: string } }> = [
     { text: prompt },
   ]
-  if (inputImage) {
-    parts.push({ inlineData: { mimeType: inputImage.mimeType, data: inputImage.base64 } })
+  for (const image of inputImages) {
+    parts.push({ inlineData: { mimeType: image.mimeType, data: image.base64 } })
   }
 
   const data = await callGenerateContent(apiKey, modelId, parts, ['IMAGE'], signal)
