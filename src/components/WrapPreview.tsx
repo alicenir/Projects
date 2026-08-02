@@ -1,4 +1,5 @@
 import type { TeslaModel } from '../data/models'
+import { VIEW_ANGLES } from '../data/viewAngles'
 import type { WrapGenerationState, MockupState, HoodRotation } from '../types'
 
 const ROTATIONS: HoodRotation[] = [0, 90, 180, 270]
@@ -14,6 +15,7 @@ interface Props {
   onDownload: () => void
   mockup: MockupState
   onPreviewOnCar: () => void
+  onRotateView: (step: number) => void
   hoodRotation: HoodRotation
   onHoodRotation: (degrees: HoodRotation) => void
 }
@@ -29,10 +31,13 @@ export function WrapPreview({
   onDownload,
   mockup,
   onPreviewOnCar,
+  onRotateView,
   hoodRotation,
   onHoodRotation,
 }: Props) {
   const busy = state.status === 'loading-concept' || state.status === 'loading-image'
+  const view = mockup.views[mockup.active]
+  const busyView = Object.values(mockup.views).some((v) => v.status === 'loading')
 
   return (
     <section className="card">
@@ -113,35 +118,79 @@ export function WrapPreview({
           <button
             type="button"
             className="ghost-btn"
-            disabled={mockup.status === 'loading'}
+            disabled={busyView}
             onClick={onPreviewOnCar}
           >
-            {mockup.status === 'loading' ? 'Rendering…' : '🚗 Preview on car'}
+            {busyView ? 'Rendering…' : '🚗 Preview on car'}
           </button>
         )}
       </div>
 
-      {mockup.status !== 'idle' && (
+      {mockup.open && (
         <div className="mockup">
-          <span className="preview-label">On-car preview</span>
-          <div className="preview-frame mockup-frame">
-            {mockup.status === 'loading' && (
-              <div className="panel-loading">
-                <div className="spinner" />
-                <p>Rendering the car…</p>
-              </div>
-            )}
-            {mockup.status === 'done' && mockup.dataUrl && (
-              <img src={mockup.dataUrl} alt={`${model.name} wearing the generated wrap`} />
-            )}
-            {mockup.status === 'error' && <div className="panel-error">{mockup.error}</div>}
+          <span className="preview-label">
+            On-car preview — {VIEW_ANGLES[mockup.active].label} ({mockup.active + 1}/{VIEW_ANGLES.length})
+          </span>
+
+          <div className="mockup-stage">
+            <button
+              type="button"
+              className="ghost-btn rotate-arrow"
+              onClick={() => onRotateView(-1)}
+              disabled={busyView}
+              aria-label="Rotate left"
+            >
+              ‹
+            </button>
+
+            <div
+              className={`preview-frame mockup-frame ${view?.status === 'done' ? 'clickable' : ''}`}
+              onClick={() => view?.status === 'done' && !busyView && onRotateView(1)}
+              title={view?.status === 'done' ? 'Click to turn the car' : undefined}
+            >
+              {view?.status === 'loading' && (
+                <div className="panel-loading">
+                  <div className="spinner" />
+                  <p>Rendering {VIEW_ANGLES[mockup.active].label.toLowerCase()}…</p>
+                </div>
+              )}
+              {view?.status === 'done' && view.dataUrl && (
+                <img src={view.dataUrl} alt={`${model.name} wearing the generated wrap, ${VIEW_ANGLES[mockup.active].label}`} />
+              )}
+              {view?.status === 'error' && <div className="panel-error">{view.error}</div>}
+            </div>
+
+            <button
+              type="button"
+              className="ghost-btn rotate-arrow"
+              onClick={() => onRotateView(1)}
+              disabled={busyView}
+              aria-label="Rotate right"
+            >
+              ›
+            </button>
           </div>
-          {mockup.status === 'done' && (
-            <p className="meta">
-              Illustrative only — the AI has no panel-mapping data, so seams won't be exact. Your car's Paint Shop
-              renders the real thing.
-            </p>
-          )}
+
+          <div className="chip-row small angle-row">
+            {VIEW_ANGLES.map((a, i) => (
+              <button
+                key={a.label}
+                type="button"
+                className={`chip outline ${mockup.active === i ? 'selected' : ''}`}
+                disabled={busyView}
+                onClick={() => onRotateView(i - mockup.active)}
+              >
+                {a.label}
+                {mockup.views[i]?.status === 'done' ? '' : ' •'}
+              </button>
+            ))}
+          </div>
+
+          <p className="meta">
+            Click the car or the arrows to turn it. Angles marked • haven't been rendered yet and cost one image
+            call each; once rendered they're cached and free to revisit. Illustrative only — the AI has no
+            panel-mapping data, so seams won't be exact.
+          </p>
         </div>
       )}
       <p className="hint small-print">

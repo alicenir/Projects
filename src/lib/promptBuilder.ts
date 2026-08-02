@@ -71,6 +71,8 @@ export function buildWrapPrompt(input: WrapPromptInput): string {
 export interface MockupPromptInput {
   model: TeslaModel
   colorName: string
+  /** Camera description from VIEW_ANGLES. */
+  anglePrompt: string
 }
 
 /**
@@ -92,7 +94,7 @@ export function buildMockupPrompt(input: MockupPromptInput): string {
 
     'In the wrap layout, the large panel near the top centre is the hood, the tall panels down each side are the doors and fenders, and the pieces along the top and bottom are the bumpers. Map that artwork onto the matching panels, preserving its colours, motifs, characters and composition so the car is clearly wearing this specific design, with the hood subject upright and facing forward.',
 
-    'Keep the reference render\'s three-quarter front angle, wheels included, lit like a showroom photograph on a clean neutral background with a soft floor reflection.',
+    `Camera: show the whole car from ${input.anglePrompt}. Wheels included, lit like a showroom photograph on a clean neutral background with a soft floor reflection. The reference render is a front three-quarter view — if the requested camera differs, rotate the same car to that angle rather than reusing the reference framing, and carry the wrap design consistently around to the surfaces now in view.`,
 
     'The panoramic roof is tinted glass and must stay dark glass — never wrapped or painted. Windows stay glass, and the tyres, badges and lights stay realistic.',
 

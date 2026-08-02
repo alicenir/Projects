@@ -8,6 +8,7 @@ import { TESLA_MODELS } from './data/models'
 import { TESLA_COLORS } from './data/colors'
 import { type WrapIntensity } from './data/themes'
 import { GEMINI_IMAGE_MODELS, GEMINI_TEXT_MODELS } from './data/geminiModels'
+import { VIEW_ANGLES } from './data/viewAngles'
 import { buildWrapPrompt, buildConceptPrompt, buildMockupPrompt } from './lib/promptBuilder'
 import { flattenOnColor, splitDataUrl } from './lib/mockup'
 import { generateWrapImage, generateConceptText } from './lib/gemini'
@@ -17,6 +18,8 @@ import { maskToPanels, findHoodPanel, rotateHoodInSource, type HoodPanel } from 
 import type { WrapGenerationState, MockupState, HoodRotation } from './types'
 
 const LS_KEY = 'tesla-wrap-studio:v2'
+
+const EMPTY_MOCKUP: MockupState = { open: false, active: 0, views: {} }
 
 const BLANK_PANEL_CORRECTION =
   'RETRY — your previous attempt left an entire panel white and unpainted, most likely the large hood panel near the top centre. Paint over EVERY part of the image this time, especially that large top-centre panel, and keep the focal subject on it facing the TOP EDGE of the image. No region of the output may be white, blank or unpainted.'
@@ -73,7 +76,7 @@ export default function App() {
   const [generation, setGeneration] = useState<WrapGenerationState>({ status: 'idle' })
   const [templateUrl, setTemplateUrl] = useState<string | null>(null)
   const [templateError, setTemplateError] = useState<string | null>(null)
-  const [mockup, setMockup] = useState<MockupState>({ status: 'idle' })
+  const [mockup, setMockup] = useState<MockupState>(EMPTY_MOCKUP)
   const [hoodRotation, setHoodRotation] = useState<HoodRotation>(0)
 
   const templateCache = useRef<Map<string, FetchedImage>>(new Map())
@@ -139,7 +142,7 @@ export default function App() {
     }
 
     // Any existing mockup belongs to the previous wrap.
-    setMockup({ status: 'idle' })
+    setMockup(EMPTY_MOCKUP)
     setGeneration({ status: 'loading-image' })
     try {
       const basePrompt = buildWrapPrompt({
@@ -228,7 +231,7 @@ export default function App() {
         height: normalized.height,
         sizeBytes: normalized.sizeBytes,
       }))
-      setMockup({ status: 'idle' })
+      setMockup(EMPTY_MOCKUP)
     } catch (err) {
       setGeneration((g) => ({
         ...g,
@@ -237,9 +240,15 @@ export default function App() {
     }
   }
 
-  async function handlePreviewOnCar() {
+  /** Renders one turntable angle. Cached angles are reused, so only new ones cost a call. */
+  async function renderAngle(index: number) {
     if (!generation.dataUrl) return
-    setMockup({ status: 'loading' })
+    if (mockup.views[index]?.status === 'done') {
+      setMockup((m) => ({ ...m, open: true, active: index }))
+      return
+    }
+
+    setMockup((m) => ({ ...m, open: true, active: index, views: { ...m.views, [index]: { status: 'loading' } } }))
     try {
       // Show the unwrapped areas in the car's real paint colour rather than as
       // transparency, which the model would otherwise render as holes.
@@ -258,7 +267,7 @@ export default function App() {
       const result = await generateWrapImage(
         prefs.apiKey.trim(),
         prefs.geminiModelId,
-        buildMockupPrompt({ model, colorName }),
+        buildMockupPrompt({ model, colorName, anglePrompt: VIEW_ANGLES[index].prompt }),
         // Vehicle reference first: the leading image anchors what is being drawn,
         // and burying it behind the wrap let the model default to a more familiar
         // generation of the same nameplate.
@@ -267,10 +276,26 @@ export default function App() {
           { base64, mimeType },
         ],
       )
-      setMockup({ status: 'done', dataUrl: result.dataUrl })
+      setMockup((m) => ({ ...m, views: { ...m.views, [index]: { status: 'done', dataUrl: result.dataUrl } } }))
     } catch (err) {
-      setMockup({ status: 'error', error: err instanceof Error ? err.message : 'Could not render the preview.' })
+      setMockup((m) => ({
+        ...m,
+        views: {
+          ...m.views,
+          [index]: { status: 'error', error: err instanceof Error ? err.message : 'Could not render the preview.' },
+        },
+      }))
     }
+  }
+
+  function handlePreviewOnCar() {
+    void renderAngle(mockup.open ? mockup.active : 0)
+  }
+
+  /** Steps around the car; +1 walks right, -1 walks left. */
+  function handleRotateView(step: number) {
+    const next = (mockup.active + step + VIEW_ANGLES.length) % VIEW_ANGLES.length
+    void renderAngle(next)
   }
 
   function handleDownload() {
@@ -336,6 +361,7 @@ export default function App() {
           onDownload={handleDownload}
           mockup={mockup}
           onPreviewOnCar={handlePreviewOnCar}
+          onRotateView={handleRotateView}
           hoodRotation={hoodRotation}
           onHoodRotation={handleHoodRotation}
         />

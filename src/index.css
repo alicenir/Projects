@@ -388,6 +388,30 @@ textarea {
 
 .mockup-frame {
   aspect-ratio: 16 / 10;
+  flex: 1;
+  min-width: 0;
+}
+
+.mockup-frame.clickable {
+  cursor: pointer;
+}
+
+.mockup-stage {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.rotate-arrow {
+  font-size: 1.6rem;
+  line-height: 1;
+  padding: 12px 14px;
+  flex: 0 0 auto;
+}
+
+.angle-row {
+  margin-top: 8px;
+  margin-bottom: 0;
 }
 
 .model-note {
