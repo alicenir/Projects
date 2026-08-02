@@ -7,9 +7,12 @@ interface Props {
   state: WrapGenerationState
   canGenerate: boolean
   hasDescription: boolean
+  libraryAvailable: boolean
+  saveStatus: 'idle' | 'saving' | 'saved'
   onGenerate: () => void
   onAiWrapGeneration: () => void
   onDownload: () => void
+  onSaveToNas: () => void
 }
 
 export function WrapPreview({
@@ -18,9 +21,12 @@ export function WrapPreview({
   state,
   canGenerate,
   hasDescription,
+  libraryAvailable,
+  saveStatus,
   onGenerate,
   onAiWrapGeneration,
   onDownload,
+  onSaveToNas,
 }: Props) {
   const busy = state.status === 'loading-concept' || state.status === 'loading-image'
 
@@ -79,6 +85,11 @@ export function WrapPreview({
         {state.status === 'done' && (
           <button type="button" className="ghost-btn" onClick={onDownload}>
             Download PNG
+          </button>
+        )}
+        {state.status === 'done' && libraryAvailable && (
+          <button type="button" className="ghost-btn" disabled={saveStatus !== 'idle'} onClick={onSaveToNas}>
+            {saveStatus === 'saving' ? 'Saving…' : saveStatus === 'saved' ? '✓ Saved' : 'Save to NAS'}
           </button>
         )}
       </div>

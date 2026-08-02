@@ -7,5 +7,9 @@ services:
     container_name: tesla-wrap-studio
     # Change the left-hand number if 8088 is already taken on your NAS.
     ports:
-      - "8088:80"
+      - "8088:3000"
+    volumes:
+      # Generated wraps you choose to save land here, readable from any device
+      # on your network. Change the left-hand path to match your NAS.
+      - /share/Docker/tesla-wrap-studio/wraps:/app/wraps
     restart: unless-stopped
