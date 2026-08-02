@@ -1,37 +1,61 @@
 # Tesla Wrap Studio
 
-A small web app for designing AI-generated custom wraps for your Tesla, sized to match
-the upload spec from [teslamotors/custom-wraps](https://github.com/teslamotors/custom-wraps).
+A web app for designing AI-generated custom wraps for your Tesla, built directly on
+top of the official templates and vehicle list from
+[teslamotors/custom-wraps](https://github.com/teslamotors/custom-wraps).
 
 Not affiliated with or endorsed by Tesla, Inc.
 
 ## What it does
 
-1. Pick your Tesla model (Cybertruck, Model 3, Model Y / Y L, Model S, Model X).
-2. Tell it your car's factory paint color — every generated wrap is prompted to
-   harmonize with that color instead of clashing with it.
-3. Pick a wrap theme (Gaming, Movies, TV Shows, Anime & Comics, Motorsport, Nature &
-   Abstract, or a fully custom description) and how bold the coverage should be.
-4. Generate artwork per body panel using Google's Gemini image models.
-5. Download each result as a spec-compliant PNG (square, 512–1024px, ≤1MB).
+1. **Pick your exact Tesla** from the same 12 vehicles/trims listed in the
+   teslamotors/custom-wraps README (Cybertruck, Model 3, Model 3 (2024+) Standard &
+   Premium / Performance, Model Y, Model Y (2025+) Standard / Premium / Performance,
+   Model Y L, Model S (2021+), Model S (2025+) Plaid, Model X (2021+)) — names and
+   thumbnails are fetched live from that repo, so they always match.
+2. **Tell it your factory paint color**, including Glacier Blue, Frost Blue, Marine
+   Blue, Deep Blue Metallic, Pearl White Multi-Coat, Solid Black, Diamond Black,
+   Stealth Grey, Quicksilver, Ultra Red, or a custom color — every generated wrap is
+   prompted to harmonize with it instead of clashing.
+3. **Describe the wrap you want** in a long-form prompt box (up to 4000 characters),
+   with one-click category chips (Gaming, Movies, TV Shows, Anime & Comics, Motorsport,
+   Nature & Abstract) and franchise examples to jump-start ideas, plus a coverage
+   intensity control (subtle / balanced / bold).
+4. **Generate Wrap** uses your description as-is. **✨ AI Wrap Generation** invents a
+   full creative concept for you (optionally steered by whatever you've already typed)
+   and generates it immediately — for when you just want something great without
+   writing the brief yourself.
+5. **Preview window** shows Tesla's official blank template next to your generated
+   result, and lets you download it as a spec-compliant PNG.
 
-Two rules are enforced in code, not just by asking nicely in the prompt:
+## How generation actually works
 
-- **The roof is never generated.** It's a disabled panel in the UI and the app never
-  calls the image API for it — the panoramic glass roof has no physical surface to
-  wrap, so it always stays empty.
-- **The frunk/hood panel always gets a "face the front" instruction** baked into its
-  prompt, so its artwork is composed to point toward the nose of the car rather than
-  sideways or backward.
+Rather than generating a wrap from scratch, the app downloads the **real
+`template.png`** for your selected vehicle straight from teslamotors/custom-wraps and
+sends it to Gemini as an input image alongside your text prompt, asking it to fill in
+the existing panel outlines — the same way you'd edit the template by hand. See
+[`src/lib/promptBuilder.ts`](src/lib/promptBuilder.ts) and
+[`src/lib/gemini.ts`](src/lib/gemini.ts).
 
-Every other panel's factory-color binding and orientation guidance lives in
-[`src/lib/promptBuilder.ts`](src/lib/promptBuilder.ts).
+This makes two of the trickier requirements structural instead of just prompted:
+
+- **The roof can never get an image or background.** Tesla's own templates don't
+  include a roof region at all — their in-car visualizer always renders the glass roof
+  on top of whatever wrap is applied, regardless of the template contents. Since
+  generation is bounded to the real template's outlines, there's no roof-shaped area
+  for anything to be drawn into in the first place.
+- **The frunk/hood panel is always instructed to face front.** The template's
+  hood/frunk region (the shield-shaped panel with two headlight cutouts) gets an
+  explicit directive to compose artwork pointing toward the front of the car — this
+  part is still prompt-based, since it lives inside a single generated image rather
+  than being a separate structural panel.
 
 ## Why Gemini, not Claude
 
 Claude's API doesn't generate images (text and vision-input only), so this app calls
-Gemini's image-generation models (the `gemini-*-image` family, aka "Nano Banana")
-directly from the browser.
+Gemini's image models directly from the browser: an image-editing model (the
+`gemini-*-image` family, aka "Nano Banana") for the wrap itself, and a fast text model
+for inventing concepts when you use "AI Wrap Generation" with an empty prompt.
 
 ## Running it locally
 

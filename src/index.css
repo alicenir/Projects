@@ -267,50 +267,104 @@ button:disabled {
   color: var(--accent);
 }
 
-.panel-grid {
-  display: grid;
-  grid-template-columns: repeat(auto-fill, minmax(220px, 1fr));
-  gap: 14px;
-}
-
-.panel-card {
+textarea {
   background: var(--panel-2);
   border: 1px solid var(--border);
-  border-radius: 12px;
-  padding: 14px;
-  display: flex;
-  flex-direction: column;
-  gap: 10px;
+  border-radius: 8px;
+  color: var(--text);
+  padding: 10px 12px;
+  font-size: 0.95rem;
+  font-family: inherit;
+  resize: vertical;
+  min-height: 120px;
 }
 
-.panel-card.disabled {
-  opacity: 0.75;
+.vehicle-grid {
+  grid-template-columns: repeat(auto-fill, minmax(130px, 1fr));
 }
 
-.panel-card-head {
-  display: flex;
-  flex-direction: column;
+.vehicle-card {
+  align-items: center;
+  text-align: center;
 }
 
-.panel-card-head .muted {
-  color: var(--muted);
-  font-size: 0.8rem;
-}
-
-.panel-preview {
-  aspect-ratio: 1 / 1;
+.vehicle-card img {
+  width: 100%;
+  max-width: 150px;
+  aspect-ratio: 4 / 3;
+  object-fit: contain;
   background: #0e0f11;
   border-radius: 8px;
+  margin-bottom: 4px;
+}
+
+.preview-columns {
+  display: flex;
+  gap: 16px;
+  flex-wrap: wrap;
+  margin-bottom: 16px;
+}
+
+.preview-box {
+  flex: 1;
+  min-width: 220px;
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
+
+.preview-box.wide {
+  flex: 2;
+  min-width: 280px;
+}
+
+.preview-label {
+  font-size: 0.8rem;
+  color: var(--muted);
+}
+
+.preview-frame {
+  background: #0e0f11;
+  border: 1px solid var(--border);
+  border-radius: 10px;
   overflow: hidden;
   display: flex;
   align-items: center;
   justify-content: center;
+  aspect-ratio: 4 / 3;
 }
 
-.panel-preview img {
+.preview-frame img {
   width: 100%;
   height: 100%;
-  object-fit: cover;
+  object-fit: contain;
+}
+
+.panel-loading {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 10px;
+  color: var(--muted);
+  font-size: 0.85rem;
+}
+
+.generate-actions button {
+  flex: 1;
+}
+
+.ai-btn {
+  border-color: var(--accent);
+  color: var(--accent);
+}
+
+.small-print {
+  margin: 12px 0 0;
+  font-size: 0.78rem;
+}
+
+.error-text {
+  color: #ff8a8a;
 }
 
 .panel-empty,
@@ -338,23 +392,6 @@ button:disabled {
 
 .panel-actions button {
   flex: 1;
-}
-
-.panel-locked {
-  aspect-ratio: 1 / 1;
-  display: flex;
-  flex-direction: column;
-  align-items: center;
-  justify-content: center;
-  gap: 8px;
-  text-align: center;
-  color: var(--muted);
-  font-size: 0.8rem;
-  padding: 10px;
-}
-
-.lock-icon {
-  font-size: 1.6rem;
 }
 
 .spinner {

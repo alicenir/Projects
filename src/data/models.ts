@@ -1,58 +1,40 @@
+const RAW_BASE = 'https://raw.githubusercontent.com/teslamotors/custom-wraps/master'
+
 export interface TeslaModel {
+  /** Matches the folder name in teslamotors/custom-wraps exactly. */
   id: string
+  /** Display name exactly as shown in the repo README. */
   name: string
-  years: string
-  bodyStyle: string
+  /** Trim/variant subtitle exactly as shown in the repo README, if any. */
+  subtitle?: string
+  templateUrl: string
+  vehicleImageUrl: string
+  repoUrl: string
 }
 
+function model(id: string, name: string, subtitle?: string): TeslaModel {
+  return {
+    id,
+    name,
+    subtitle,
+    templateUrl: `${RAW_BASE}/${id}/template.png`,
+    vehicleImageUrl: `${RAW_BASE}/${id}/vehicle_image.png`,
+    repoUrl: `https://github.com/teslamotors/custom-wraps/tree/master/${id}`,
+  }
+}
+
+/** Exact set and order of vehicles listed in the teslamotors/custom-wraps README. */
 export const TESLA_MODELS: TeslaModel[] = [
-  { id: 'cybertruck', name: 'Cybertruck', years: '2024+', bodyStyle: 'Angular stainless-steel exoskeleton pickup' },
-  { id: 'model3', name: 'Model 3', years: '2024+', bodyStyle: 'Sedan' },
-  { id: 'modely', name: 'Model Y', years: '2025', bodyStyle: 'Compact SUV' },
-  { id: 'modelyl', name: 'Model Y L', years: '2025', bodyStyle: 'Extended-length SUV' },
-  { id: 'models', name: 'Model S', years: '2021+ / Plaid', bodyStyle: 'Sedan' },
-  { id: 'modelx', name: 'Model X', years: '2021+', bodyStyle: 'SUV with falcon-wing doors' },
-]
-
-export interface WrapPanel {
-  id: string
-  label: string
-  description: string
-  /** Panels that never receive AI artwork (e.g. the glass roof) */
-  disabled?: boolean
-  disabledReason?: string
-  /** Extra directive baked into every prompt for this panel */
-  orientationNote?: string
-}
-
-export const WRAP_PANELS: WrapPanel[] = [
-  {
-    id: 'frunk',
-    label: 'Frunk / Hood',
-    description: 'Front hood panel above the frunk',
-    orientationNote:
-      'This panel sits at the very front of the car, ahead of the windshield. Compose the artwork so its focal subject (character, logo, creature, vehicle, or any directional element) faces and points toward the front of the vehicle — never toward the rear or off to the side — the way a hood graphic should read correctly when the car is viewed from the front or front three-quarter angle.',
-  },
-  {
-    id: 'doors',
-    label: 'Doors & Sides',
-    description: 'Side doors and rocker panels',
-    orientationNote:
-      'This is a side panel running along the length of the door. The design should read naturally left-to-right as the car is viewed from the side, with any directional motion (speed lines, characters, motion blur) pointing toward the front of the car.',
-  },
-  {
-    id: 'rear',
-    label: 'Rear / Trunk',
-    description: 'Rear trunk lid or tailgate panel',
-    orientationNote:
-      'This is the rear panel, viewed from directly behind the car. Any directional elements (logos, characters, text) should face outward toward the viewer standing behind the vehicle.',
-  },
-  {
-    id: 'roof',
-    label: 'Roof',
-    description: 'Panoramic glass roof',
-    disabled: true,
-    disabledReason:
-      'This is a glass roof, not a paintable panel. No image or background is ever generated or applied here — it is intentionally left out of every wrap set.',
-  },
+  model('cybertruck', 'Cybertruck'),
+  model('model3', 'Model 3'),
+  model('model3-2024-base', 'Model 3 (2024+)', 'Standard & Premium'),
+  model('model3-2024-performance', 'Model 3 (2024+)', 'Performance'),
+  model('modely', 'Model Y'),
+  model('modely-2025-base', 'Model Y (2025+)', 'Standard'),
+  model('modely-2025-premium', 'Model Y (2025+)', 'Premium'),
+  model('modely-2025-performance', 'Model Y (2025+)', 'Performance'),
+  model('modely-l', 'Model Y L'),
+  model('models-2021', 'Model S (2021+)'),
+  model('models-2025-plaid', 'Model S (2025+)', 'Plaid'),
+  model('modelx-2021', 'Model X (2021+)'),
 ]

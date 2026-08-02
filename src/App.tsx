@@ -1,19 +1,20 @@
-import { useEffect, useState } from 'react'
+import { useEffect, useRef, useState } from 'react'
 import { ApiKeyInput } from './components/ApiKeyInput'
 import { ModelSelector } from './components/ModelSelector'
 import { ColorPicker } from './components/ColorPicker'
-import { ThemeSelector } from './components/ThemeSelector'
-import { PanelGrid } from './components/PanelGrid'
-import { TESLA_MODELS, WRAP_PANELS } from './data/models'
+import { PromptComposer } from './components/PromptComposer'
+import { WrapPreview } from './components/WrapPreview'
+import { TESLA_MODELS } from './data/models'
 import { TESLA_COLORS } from './data/colors'
-import { WRAP_THEMES, type WrapIntensity } from './data/themes'
+import { type WrapIntensity } from './data/themes'
 import { GEMINI_IMAGE_MODELS } from './data/geminiModels'
-import { buildPanelPrompt } from './lib/promptBuilder'
-import { generateWrapImage } from './lib/gemini'
+import { buildWrapPrompt, buildConceptPrompt } from './lib/promptBuilder'
+import { generateWrapImage, generateConceptText } from './lib/gemini'
 import { normalizeToWrapSpec, sanitizeWrapFilename } from './lib/imageSpec'
-import type { PanelStateMap } from './types'
+import { fetchImageAsset, type FetchedImage } from './lib/templateAssets'
+import type { WrapGenerationState } from './types'
 
-const LS_KEY = 'tesla-wrap-studio:v1'
+const LS_KEY = 'tesla-wrap-studio:v2'
 
 interface PersistedPrefs {
   apiKey: string
@@ -22,8 +23,7 @@ interface PersistedPrefs {
   colorId: string
   customHex: string
   customName: string
-  themeId: string
-  themeDetail: string
+  description: string
   intensity: WrapIntensity
 }
 
@@ -45,79 +45,120 @@ function defaultPrefs(): PersistedPrefs {
     colorId: TESLA_COLORS[0].id,
     customHex: '#8A8D90',
     customName: 'Custom color',
-    themeId: WRAP_THEMES[0].id,
-    themeDetail: '',
+    description: '',
     intensity: 'balanced',
   }
 }
 
 export default function App() {
   const [prefs, setPrefs] = useState<PersistedPrefs>(loadPrefs)
-  const [panelStates, setPanelStates] = useState<PanelStateMap>({})
+  const [generation, setGeneration] = useState<WrapGenerationState>({ status: 'idle' })
+  const [templateUrl, setTemplateUrl] = useState<string | null>(null)
+  const [templateError, setTemplateError] = useState<string | null>(null)
+
+  const templateCache = useRef<Map<string, FetchedImage>>(new Map())
 
   useEffect(() => {
     localStorage.setItem(LS_KEY, JSON.stringify(prefs))
   }, [prefs])
 
   const model = TESLA_MODELS.find((m) => m.id === prefs.modelId)!
-  const theme = WRAP_THEMES.find((t) => t.id === prefs.themeId)!
   const selectedColor = TESLA_COLORS.find((c) => c.id === prefs.colorId)!
   const colorHex = prefs.colorId === 'custom' ? prefs.customHex : selectedColor.hex
   const colorName = prefs.colorId === 'custom' ? prefs.customName || 'Custom color' : selectedColor.name
 
-  const canGenerate =
-    prefs.apiKey.trim().length > 0 &&
-    Boolean(model) &&
-    Boolean(theme) &&
-    (theme.id !== 'custom' || prefs.themeDetail.trim().length > 0)
+  // Load (and cache) the official template whenever the selected model changes.
+  useEffect(() => {
+    let cancelled = false
+    setTemplateError(null)
 
-  async function handleGenerate(panelId: string) {
-    const panel = WRAP_PANELS.find((p) => p.id === panelId)
-    if (!panel || panel.disabled) return // roof (or any future disabled panel) never generates
+    const cached = templateCache.current.get(model.id)
+    if (cached) {
+      setTemplateUrl(cached.objectUrl)
+      return
+    }
 
-    setPanelStates((prev) => ({ ...prev, [panelId]: { status: 'loading' } }))
+    setTemplateUrl(null)
+    fetchImageAsset(model.templateUrl)
+      .then((img) => {
+        if (cancelled) return
+        templateCache.current.set(model.id, img)
+        setTemplateUrl(img.objectUrl)
+      })
+      .catch((err) => {
+        if (cancelled) return
+        setTemplateError(err instanceof Error ? err.message : 'Could not load the template.')
+      })
 
+    return () => {
+      cancelled = true
+    }
+  }, [model.id, model.templateUrl])
+
+  const canGenerate = prefs.apiKey.trim().length > 0 && Boolean(templateUrl) && !templateError
+  const hasDescription = prefs.description.trim().length > 0
+
+  async function runImageGeneration(description: string) {
+    const template = templateCache.current.get(model.id)
+    if (!template) {
+      setGeneration({ status: 'error', error: 'Template is still loading — try again in a moment.' })
+      return
+    }
+
+    setGeneration({ status: 'loading-image' })
     try {
-      const prompt = buildPanelPrompt({
+      const prompt = buildWrapPrompt({
         model,
-        panel,
-        color: selectedColor,
         colorHex,
         colorName,
-        theme,
-        themeDetail: prefs.themeDetail,
+        description,
         intensity: prefs.intensity,
       })
 
-      const raw = await generateWrapImage(prefs.apiKey.trim(), prefs.geminiModelId, prompt)
-      const normalized = await normalizeToWrapSpec(raw.dataUrl)
+      const raw = await generateWrapImage(prefs.apiKey.trim(), prefs.geminiModelId, prompt, {
+        base64: template.base64,
+        mimeType: template.mimeType,
+      })
+      const normalized = await normalizeToWrapSpec(raw.dataUrl, template.width, template.height)
 
-      setPanelStates((prev) => ({
-        ...prev,
-        [panelId]: {
-          status: 'done',
-          dataUrl: normalized.dataUrl,
-          width: normalized.width,
-          height: normalized.height,
-          sizeBytes: normalized.sizeBytes,
-        },
-      }))
+      setGeneration({
+        status: 'done',
+        dataUrl: normalized.dataUrl,
+        width: normalized.width,
+        height: normalized.height,
+        sizeBytes: normalized.sizeBytes,
+      })
     } catch (err) {
-      setPanelStates((prev) => ({
-        ...prev,
-        [panelId]: { status: 'error', error: err instanceof Error ? err.message : 'Generation failed.' },
-      }))
+      setGeneration({ status: 'error', error: err instanceof Error ? err.message : 'Generation failed.' })
     }
   }
 
-  function handleDownload(panelId: string) {
-    const state = panelStates[panelId]
-    const panel = WRAP_PANELS.find((p) => p.id === panelId)
-    if (!state?.dataUrl || !panel) return
+  async function handleGenerate() {
+    if (!hasDescription) return
+    await runImageGeneration(prefs.description.trim())
+  }
 
-    const filename = sanitizeWrapFilename(`${model.name}_${panel.label}_${theme.label}`.replace(/\s+/g, '_'))
+  async function handleAiWrapGeneration() {
+    setGeneration({ status: 'loading-concept' })
+    try {
+      const conceptPrompt = buildConceptPrompt({
+        model,
+        colorName,
+        themeHint: prefs.description.trim() || undefined,
+      })
+      const concept = await generateConceptText(prefs.apiKey.trim(), conceptPrompt)
+      setPrefs((p) => ({ ...p, description: concept }))
+      await runImageGeneration(concept)
+    } catch (err) {
+      setGeneration({ status: 'error', error: err instanceof Error ? err.message : 'Concept generation failed.' })
+    }
+  }
+
+  function handleDownload() {
+    if (!generation.dataUrl) return
+    const filename = sanitizeWrapFilename(`${model.name}_wrap`.replace(/\s+/g, '_'))
     const a = document.createElement('a')
-    a.href = state.dataUrl
+    a.href = generation.dataUrl
     a.download = `${filename}.png`
     a.click()
   }
@@ -127,11 +168,11 @@ export default function App() {
       <header className="app-header">
         <h1>Tesla Wrap Studio</h1>
         <p>
-          Design AI-generated custom wraps sized for the{' '}
+          Design AI-generated custom wraps using the real{' '}
           <a href="https://github.com/teslamotors/custom-wraps" target="_blank" rel="noreferrer">
             teslamotors/custom-wraps
           </a>{' '}
-          Paint Shop upload spec.
+          templates.
         </p>
       </header>
 
@@ -154,37 +195,39 @@ export default function App() {
           onCustomNameChange={(customName) => setPrefs((p) => ({ ...p, customName }))}
         />
 
-        <ThemeSelector
-          themeId={prefs.themeId}
-          themeDetail={prefs.themeDetail}
+        <PromptComposer
+          description={prefs.description}
           intensity={prefs.intensity}
-          onThemeChange={(themeId) => setPrefs((p) => ({ ...p, themeId, themeDetail: '' }))}
-          onThemeDetailChange={(themeDetail) => setPrefs((p) => ({ ...p, themeDetail }))}
+          onDescriptionChange={(description) => setPrefs((p) => ({ ...p, description }))}
           onIntensityChange={(intensity) => setPrefs((p) => ({ ...p, intensity }))}
         />
 
-        <PanelGrid
-          panelStates={panelStates}
+        {templateError && <p className="hint error-text">{templateError}</p>}
+
+        <WrapPreview
+          model={model}
+          templateUrl={templateUrl}
+          state={generation}
           canGenerate={canGenerate}
+          hasDescription={hasDescription}
           onGenerate={handleGenerate}
+          onAiWrapGeneration={handleAiWrapGeneration}
           onDownload={handleDownload}
         />
 
-        {!canGenerate && (
-          <p className="hint center">
-            Add your API key{theme.id === 'custom' ? ' and describe your custom theme' : ''} above to enable
-            generation.
-          </p>
+        {!canGenerate && !templateError && (
+          <p className="hint center">Add your API key above to enable generation.</p>
         )}
       </main>
 
       <footer className="app-footer">
         <p>
-          Wrap specs (512–1024px square PNG, ≤1MB) follow{' '}
+          Templates and vehicle images are fetched live from{' '}
           <a href="https://github.com/teslamotors/custom-wraps" target="_blank" rel="noreferrer">
             teslamotors/custom-wraps
           </a>
-          . This project is not affiliated with or endorsed by Tesla, Inc.
+          . Wrap specs (512–1024px, PNG, ≤1MB) follow the same repo. This project is not affiliated with or endorsed
+          by Tesla, Inc.
         </p>
       </footer>
     </div>
