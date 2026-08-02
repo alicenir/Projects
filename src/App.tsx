@@ -13,8 +13,8 @@ import { flattenOnColor, splitDataUrl } from './lib/mockup'
 import { generateWrapImage, generateConceptText } from './lib/gemini'
 import { normalizeToWrapSpec, sanitizeWrapFilename } from './lib/imageSpec'
 import { fetchImageAsset, type FetchedImage } from './lib/templateAssets'
-import { maskToPanels } from './lib/panelMask'
-import type { WrapGenerationState, MockupState } from './types'
+import { maskToPanels, findHoodPanel, rotateHoodArtwork, type HoodPanel } from './lib/panelMask'
+import type { WrapGenerationState, MockupState, HoodRotation } from './types'
 
 const LS_KEY = 'tesla-wrap-studio:v2'
 
@@ -74,8 +74,10 @@ export default function App() {
   const [templateUrl, setTemplateUrl] = useState<string | null>(null)
   const [templateError, setTemplateError] = useState<string | null>(null)
   const [mockup, setMockup] = useState<MockupState>({ status: 'idle' })
+  const [hoodRotation, setHoodRotation] = useState<HoodRotation>(0)
 
   const templateCache = useRef<Map<string, FetchedImage>>(new Map())
+  const hoodCache = useRef<Map<string, HoodPanel | null>>(new Map())
 
   useEffect(() => {
     localStorage.setItem(LS_KEY, JSON.stringify(prefs))
@@ -124,7 +126,9 @@ export default function App() {
     })
     // Clip to the template's real panels so nothing can land on the glass roof or
     // the background, whatever the model actually drew.
-    return maskToPanels(raw.dataUrl, template.objectUrl)
+    const masked = await maskToPanels(raw.dataUrl, template.objectUrl)
+    // Keep the unmasked output — rotating the hood samples from it.
+    return { ...masked, sourceDataUrl: raw.dataUrl }
   }
 
   async function runImageGeneration(description: string) {
@@ -155,10 +159,13 @@ export default function App() {
       }
 
       const normalized = await normalizeToWrapSpec(masked.dataUrl, template.width, template.height)
+      setHoodRotation(0)
 
       setGeneration({
         status: 'done',
         dataUrl: normalized.dataUrl,
+        baseDataUrl: masked.dataUrl,
+        sourceDataUrl: masked.sourceDataUrl,
         width: normalized.width,
         height: normalized.height,
         sizeBytes: normalized.sizeBytes,
@@ -186,6 +193,44 @@ export default function App() {
       await runImageGeneration(concept)
     } catch (err) {
       setGeneration({ status: 'error', error: err instanceof Error ? err.message : 'Concept generation failed.' })
+    }
+  }
+
+  /** Hood geometry depends only on the template, so derive it once per model. */
+  async function getHoodPanel(template: FetchedImage): Promise<HoodPanel | null> {
+    const cached = hoodCache.current.get(model.id)
+    if (cached !== undefined) return cached
+    const hood = await findHoodPanel(template.objectUrl).catch(() => null)
+    hoodCache.current.set(model.id, hood)
+    return hood
+  }
+
+  async function handleHoodRotation(degrees: HoodRotation) {
+    const template = templateCache.current.get(model.id)
+    if (!template || !generation.baseDataUrl || !generation.sourceDataUrl) return
+
+    setHoodRotation(degrees)
+    try {
+      const hood = await getHoodPanel(template)
+      // Always re-derive from the unrotated base so repeated clicks don't compound.
+      const rotated =
+        hood && degrees !== 0
+          ? await rotateHoodArtwork(generation.baseDataUrl, generation.sourceDataUrl, hood, degrees)
+          : generation.baseDataUrl
+      const normalized = await normalizeToWrapSpec(rotated, template.width, template.height)
+      setGeneration((g) => ({
+        ...g,
+        dataUrl: normalized.dataUrl,
+        width: normalized.width,
+        height: normalized.height,
+        sizeBytes: normalized.sizeBytes,
+      }))
+      setMockup({ status: 'idle' })
+    } catch (err) {
+      setGeneration((g) => ({
+        ...g,
+        error: err instanceof Error ? err.message : 'Could not rotate the frunk artwork.',
+      }))
     }
   }
 
@@ -272,6 +317,8 @@ export default function App() {
           onDownload={handleDownload}
           mockup={mockup}
           onPreviewOnCar={handlePreviewOnCar}
+          hoodRotation={hoodRotation}
+          onHoodRotation={handleHoodRotation}
         />
 
         {!canGenerate && !templateError && (

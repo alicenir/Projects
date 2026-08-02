@@ -86,6 +86,16 @@ function countBlankPanels(
   return blank
 }
 
+export interface HoodPanel {
+  /** 1 for pixels belonging to the hood panel. */
+  mask: Uint8Array
+  width: number
+  height: number
+  /** Centroid, used as the pivot when rotating the panel's artwork. */
+  cx: number
+  cy: number
+}
+
 function loadImage(src: string): Promise<HTMLImageElement> {
   return new Promise((resolve, reject) => {
     const img = new Image()
@@ -142,6 +152,152 @@ function computeMasks(templateData: ImageData): { outside: Uint8Array; isOutline
   }
 
   return { outside, isOutline }
+}
+
+function templateToImageData(template: HTMLImageElement): ImageData {
+  const canvas = document.createElement('canvas')
+  canvas.width = template.naturalWidth
+  canvas.height = template.naturalHeight
+  const ctx = canvas.getContext('2d', { willReadFrequently: true })
+  if (!ctx) throw new Error('Canvas 2D context unavailable.')
+  ctx.drawImage(template, 0, 0)
+  return ctx.getImageData(0, 0, canvas.width, canvas.height)
+}
+
+/**
+ * Locates the hood panel so its artwork can be rotated independently.
+ *
+ * Across Tesla's templates the hood is the large panel sitting in the upper
+ * middle of the canvas — above the mirror ovals, below the front bumper strip —
+ * so candidates are restricted to components centred in the top portion near the
+ * horizontal midline, and the largest of those wins.
+ */
+export async function findHoodPanel(templateDataUrl: string): Promise<HoodPanel | null> {
+  const template = await loadImage(templateDataUrl)
+  const templateData = templateToImageData(template)
+  const { width, height } = templateData
+  const { outside, isOutline } = computeMasks(templateData)
+
+  const paintable = new Uint8Array(width * height)
+  for (let p = 0; p < paintable.length; p++) {
+    if (!outside[p] && !isOutline[p]) paintable[p] = 1
+  }
+
+  const seen = new Uint8Array(width * height)
+  const minArea = width * height * 0.01
+  let best: { pixels: number[]; area: number; cx: number; cy: number } | null = null
+
+  for (let start = 0; start < paintable.length; start++) {
+    if (!paintable[start] || seen[start]) continue
+
+    const stack = [start]
+    seen[start] = 1
+    const pixels: number[] = []
+    let sumX = 0
+    let sumY = 0
+    let minX = width
+    let maxX = -1
+    let minY = height
+    let maxY = -1
+
+    while (stack.length) {
+      const p = stack.pop()!
+      pixels.push(p)
+      const x = p % width
+      const y = (p - x) / width
+      sumX += x
+      sumY += y
+      if (x < minX) minX = x
+      if (x > maxX) maxX = x
+      if (y < minY) minY = y
+      if (y > maxY) maxY = y
+
+      const neighbours = [
+        x + 1 < width ? p + 1 : -1,
+        x - 1 >= 0 ? p - 1 : -1,
+        y + 1 < height ? p + width : -1,
+        y - 1 >= 0 ? p - width : -1,
+      ]
+      for (const n of neighbours) {
+        if (n >= 0 && paintable[n] && !seen[n]) {
+          seen[n] = 1
+          stack.push(n)
+        }
+      }
+    }
+
+    const area = pixels.length
+    if (area < minArea) continue
+
+    const cx = sumX / area
+    const cy = sumY / area
+    // Hood sits in the upper half, straddling the horizontal centre.
+    if (cy > height * 0.55) continue
+    if (Math.abs(cx - width / 2) > width * 0.12) continue
+    // Bumper and fascia strips are also large and centred, but they are long and
+    // flat; the hood is roughly as tall as it is wide.
+    if ((maxX - minX) / Math.max(1, maxY - minY) > 2.5) continue
+
+    if (!best || area > best.area) best = { pixels, area, cx, cy }
+  }
+
+  if (!best) return null
+
+  const mask = new Uint8Array(width * height)
+  for (const p of best.pixels) mask[p] = 1
+  return { mask, width, height, cx: best.cx, cy: best.cy }
+}
+
+/**
+ * Rotates only the hood panel's artwork about the panel's centroid, leaving every
+ * other panel untouched.
+ *
+ * Rotation samples from `sourceDataUrl` — the raw generated image before masking,
+ * which is opaque across the whole canvas — rather than from the already-masked
+ * wrap. Rotating the masked version drags its transparent surroundings into the
+ * panel's corners, which then render as black wedges.
+ */
+export async function rotateHoodArtwork(
+  maskedDataUrl: string,
+  sourceDataUrl: string,
+  hood: HoodPanel,
+  degrees: number,
+): Promise<string> {
+  const [art, source] = await Promise.all([loadImage(maskedDataUrl), loadImage(sourceDataUrl)])
+  const { width, height } = hood
+
+  const base = document.createElement('canvas')
+  base.width = width
+  base.height = height
+  const baseCtx = base.getContext('2d', { willReadFrequently: true })
+  if (!baseCtx) throw new Error('Canvas 2D context unavailable.')
+  baseCtx.drawImage(art, 0, 0, width, height)
+  const original = baseCtx.getImageData(0, 0, width, height)
+
+  const rotated = document.createElement('canvas')
+  rotated.width = width
+  rotated.height = height
+  const rotCtx = rotated.getContext('2d', { willReadFrequently: true })
+  if (!rotCtx) throw new Error('Canvas 2D context unavailable.')
+  rotCtx.translate(hood.cx, hood.cy)
+  rotCtx.rotate((degrees * Math.PI) / 180)
+  rotCtx.translate(-hood.cx, -hood.cy)
+  rotCtx.drawImage(source, 0, 0, width, height)
+  const rotatedData = rotCtx.getImageData(0, 0, width, height)
+
+  for (let p = 0, i = 0; p < hood.mask.length; p++, i += 4) {
+    if (!hood.mask[p]) continue
+    // If rotation still reached past the source edge, keep what was already there
+    // rather than punching a hole in the panel.
+    if (rotatedData.data[i + 3] === 0) continue
+    original.data[i] = rotatedData.data[i]
+    original.data[i + 1] = rotatedData.data[i + 1]
+    original.data[i + 2] = rotatedData.data[i + 2]
+    original.data[i + 3] = 255
+  }
+
+  baseCtx.putImageData(original, 0, 0)
+  return base.toDataURL('image/png')
 }
 
 /**

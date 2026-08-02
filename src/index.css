@@ -368,6 +368,17 @@ textarea {
   color: #ff8a8a;
 }
 
+.rotate-row {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  margin-top: 4px;
+}
+
+.rotate-row .chip-row {
+  margin-bottom: 0;
+}
+
 .mockup {
   display: flex;
   flex-direction: column;

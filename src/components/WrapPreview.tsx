@@ -1,5 +1,7 @@
 import type { TeslaModel } from '../data/models'
-import type { WrapGenerationState, MockupState } from '../types'
+import type { WrapGenerationState, MockupState, HoodRotation } from '../types'
+
+const ROTATIONS: HoodRotation[] = [0, 90, 180, 270]
 
 interface Props {
   model: TeslaModel
@@ -12,6 +14,8 @@ interface Props {
   onDownload: () => void
   mockup: MockupState
   onPreviewOnCar: () => void
+  hoodRotation: HoodRotation
+  onHoodRotation: (degrees: HoodRotation) => void
 }
 
 export function WrapPreview({
@@ -25,6 +29,8 @@ export function WrapPreview({
   onDownload,
   mockup,
   onPreviewOnCar,
+  hoodRotation,
+  onHoodRotation,
 }: Props) {
   const busy = state.status === 'loading-concept' || state.status === 'loading-image'
 
@@ -70,6 +76,23 @@ export function WrapPreview({
             <p className="meta">
               {state.width}×{state.height}px PNG · {((state.sizeBytes ?? 0) / 1024).toFixed(0)} KB
             </p>
+          )}
+          {state.status === 'done' && (
+            <div className="rotate-row">
+              <span className="preview-label">Frunk artwork rotation</span>
+              <div className="chip-row small">
+                {ROTATIONS.map((deg) => (
+                  <button
+                    key={deg}
+                    type="button"
+                    className={`chip outline ${hoodRotation === deg ? 'selected' : ''}`}
+                    onClick={() => onHoodRotation(deg)}
+                  >
+                    {deg}°
+                  </button>
+                ))}
+              </div>
+            </div>
           )}
         </div>
       </div>
