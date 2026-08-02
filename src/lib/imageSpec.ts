@@ -89,3 +89,48 @@ export function sanitizeWrapFilename(raw: string): string {
   const cleaned = raw.replace(/[^a-zA-Z0-9_\- ]/g, '').trim()
   return (cleaned || 'tesla_wrap').slice(0, 30)
 }
+
+const MAX_NAME = 30
+const LEADING_FILLER = /^(a|an|the|with|of|in)$/i
+
+/**
+ * Strictly increasing millisecond stamp. Date.now() alone repeats when called
+ * twice inside the same millisecond, which would hand two downloads the same
+ * name; forcing the value forward guarantees every call gets a distinct token.
+ */
+let lastStamp = 0
+function nextStamp(): number {
+  const now = Date.now()
+  lastStamp = now > lastStamp ? now : lastStamp + 1
+  return lastStamp
+}
+
+/**
+ * Names a download after the wrap's own description, with a short time token so no
+ * two downloads collide — otherwise every save is "Model_Y_wrap.png" and the
+ * browser starts appending "(1)", "(2)" and you lose track of which is which.
+ *
+ * Stays inside the Tesla filename spec: alphanumerics, underscores, max 30 chars.
+ * Words are added whole so the name never breaks off mid-word.
+ */
+export function buildWrapFilename(description: string): string {
+  const token = nextStamp().toString(36).slice(-6)
+  const budget = MAX_NAME - token.length - 1
+
+  const words = description
+    .replace(/[^a-zA-Z0-9 ]/g, ' ')
+    .split(/\s+/)
+    .filter(Boolean)
+  while (words.length > 1 && LEADING_FILLER.test(words[0])) words.shift()
+
+  let slug = ''
+  for (const word of words) {
+    const next = slug ? `${slug}_${word}` : word
+    if (next.length > budget) break
+    slug = next
+  }
+  // A single opening word longer than the budget still needs trimming.
+  if (!slug) slug = (words[0] ?? 'tesla_wrap').slice(0, budget)
+
+  return `${slug}_${token}`
+}

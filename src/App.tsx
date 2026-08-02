@@ -12,7 +12,7 @@ import { VIEW_ANGLES } from './data/viewAngles'
 import { buildWrapPrompt, buildConceptPrompt, buildMockupPrompt } from './lib/promptBuilder'
 import { flattenOnColor, splitDataUrl } from './lib/mockup'
 import { generateWrapImage, generateConceptText } from './lib/gemini'
-import { normalizeToWrapSpec, sanitizeWrapFilename } from './lib/imageSpec'
+import { normalizeToWrapSpec, buildWrapFilename } from './lib/imageSpec'
 import { fetchImageAsset, type FetchedImage } from './lib/templateAssets'
 import { maskToPanels, findHoodPanel, rotateHoodInSource, type HoodPanel } from './lib/panelMask'
 import type { WrapGenerationState, MockupState, HoodRotation } from './types'
@@ -300,10 +300,9 @@ export default function App() {
 
   function handleDownload() {
     if (!generation.dataUrl) return
-    const filename = sanitizeWrapFilename(`${model.name}_wrap`.replace(/\s+/g, '_'))
     const a = document.createElement('a')
     a.href = generation.dataUrl
-    a.download = `${filename}.png`
+    a.download = `${buildWrapFilename(prefs.description || `${model.name} wrap`)}.png`
     a.click()
   }
 
