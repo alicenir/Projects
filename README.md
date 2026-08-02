@@ -113,8 +113,15 @@ If you'd rather not install Node at all:
 docker compose up -d --build
 ```
 
-Then open `http://localhost:8088`. Change the left-hand port in `docker-compose.yml`
-if 8088 is already in use.
+Then open `http://localhost:8095`.
+
+The host port and the wraps folder are both configurable without editing
+`docker-compose.yml` — copy `.env.example` to `.env` and set `WRAP_PORT` /
+`WRAPS_PATH`, or pass them inline:
+
+```bash
+WRAP_PORT=9137 docker compose up -d --build
+```
 
 Two-stage build: `node:22-alpine` compiles the bundle, then the runtime image installs
 production dependencies only (no Vite, no TypeScript) and runs Express to serve both
@@ -127,17 +134,6 @@ proxied by, or stored on the server.
 
 ### Deploying on a NAS with Portainer
 
-The compose file mounts `/share/Docker/tesla-wrap-studio/wraps` (a QNAP-style path)
-into the container. **Edit that left-hand path to match your NAS** before deploying:
-
-| NAS | Typical path |
-| --- | --- |
-| QNAP | `/share/Docker/tesla-wrap-studio/wraps` |
-| Synology | `/volume1/docker/tesla-wrap-studio/wraps` |
-| Unraid | `/mnt/user/appdata/tesla-wrap-studio/wraps` |
-
-Then:
-
 1. In Portainer, go to **Stacks → Add stack**, name it `tesla-wrap-studio`, and choose
    **Repository** as the build method.
 2. **Repository URL**: `https://github.com/<your-user>/<your-repo>`
@@ -147,11 +143,23 @@ Then:
 5. If the repository is private, switch on **Authentication** and use your GitHub
    username with a [personal access token](https://github.com/settings/tokens) (scope
    `repo`) as the password. A normal account password will not work.
-6. Click **Deploy the stack**. The first deploy compiles the bundle, so expect a few
+6. In the **Environment variables** box, set these to match your NAS — no file editing
+   needed:
+
+   | Name | Value |
+   | --- | --- |
+   | `WRAP_PORT` | any free port, e.g. `8095` |
+   | `WRAPS_PATH` | QNAP `/share/Docker/tesla-wrap-studio/wraps` · Synology `/volume1/docker/tesla-wrap-studio/wraps` · Unraid `/mnt/user/appdata/tesla-wrap-studio/wraps` |
+
+7. Click **Deploy the stack**. The first deploy compiles the bundle, so expect a few
    minutes on slower NAS hardware; later deploys reuse cached layers.
 
-The app is then reachable at `http://<nas-ip>:8088`, and saved wraps appear in the
-folder you mounted.
+The app is then reachable at `http://<nas-ip>:<WRAP_PORT>`, and saved wraps appear in
+the folder you mounted.
+
+If the deploy fails with a port-allocation error, that port is already in use — pick
+another and redeploy. To see what's taken, SSH into the NAS and run
+`netstat -tuln | grep LISTEN` (or `docker ps` to check other containers).
 
 To pick up later changes, open the stack in Portainer and use **Pull and redeploy**.
 

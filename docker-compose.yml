@@ -5,11 +5,12 @@ services:
       dockerfile: Dockerfile
     image: tesla-wrap-studio:latest
     container_name: tesla-wrap-studio
-    # Change the left-hand number if 8088 is already taken on your NAS.
+    # Host port is overridable: set WRAP_PORT in a .env file, or in Portainer's
+    # "Environment variables" box on the stack, without editing this file.
     ports:
-      - "8088:3000"
+      - "${WRAP_PORT:-8095}:3000"
     volumes:
       # Generated wraps you choose to save land here, readable from any device
-      # on your network. Change the left-hand path to match your NAS.
-      - /share/Docker/tesla-wrap-studio/wraps:/app/wraps
+      # on your network. Override with WRAPS_PATH the same way as the port.
+      - "${WRAPS_PATH:-/share/Docker/tesla-wrap-studio/wraps}:/app/wraps"
     restart: unless-stopped
