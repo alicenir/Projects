@@ -1,5 +1,5 @@
 import type { TeslaModel } from '../data/models'
-import type { WrapGenerationState } from '../types'
+import type { WrapGenerationState, MockupState } from '../types'
 
 interface Props {
   model: TeslaModel
@@ -10,6 +10,8 @@ interface Props {
   onGenerate: () => void
   onAiWrapGeneration: () => void
   onDownload: () => void
+  mockup: MockupState
+  onPreviewOnCar: () => void
 }
 
 export function WrapPreview({
@@ -21,6 +23,8 @@ export function WrapPreview({
   onGenerate,
   onAiWrapGeneration,
   onDownload,
+  mockup,
+  onPreviewOnCar,
 }: Props) {
   const busy = state.status === 'loading-concept' || state.status === 'loading-image'
 
@@ -82,7 +86,41 @@ export function WrapPreview({
             Download PNG
           </button>
         )}
+        {state.status === 'done' && (
+          <button
+            type="button"
+            className="ghost-btn"
+            disabled={mockup.status === 'loading'}
+            onClick={onPreviewOnCar}
+          >
+            {mockup.status === 'loading' ? 'Rendering…' : '🚗 Preview on car'}
+          </button>
+        )}
       </div>
+
+      {mockup.status !== 'idle' && (
+        <div className="mockup">
+          <span className="preview-label">On-car preview</span>
+          <div className="preview-frame mockup-frame">
+            {mockup.status === 'loading' && (
+              <div className="panel-loading">
+                <div className="spinner" />
+                <p>Rendering the car…</p>
+              </div>
+            )}
+            {mockup.status === 'done' && mockup.dataUrl && (
+              <img src={mockup.dataUrl} alt={`${model.name} wearing the generated wrap`} />
+            )}
+            {mockup.status === 'error' && <div className="panel-error">{mockup.error}</div>}
+          </div>
+          {mockup.status === 'done' && (
+            <p className="meta">
+              Illustrative only — the AI has no panel-mapping data, so seams won't be exact. Your car's Paint Shop
+              renders the real thing.
+            </p>
+          )}
+        </div>
+      )}
       <p className="hint small-print">
         <strong>Generate Wrap</strong> uses exactly what you typed above. <strong>AI Wrap Generation</strong> invents
         a full concept for you — instantly, or shaped by any hints you've already typed — then generates it.

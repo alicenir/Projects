@@ -68,6 +68,31 @@ export function buildWrapPrompt(input: WrapPromptInput): string {
     .join(' ')
 }
 
+export interface MockupPromptInput {
+  model: TeslaModel
+  colorName: string
+}
+
+/**
+ * Builds the instruction for the "Preview on car" mockup, which sends the finished
+ * wrap back to the image model and asks for it rendered on the vehicle.
+ *
+ * This is deliberately illustrative rather than exact — the model has no UV data,
+ * so panel seams won't land pixel-perfectly. It exists to judge how the design
+ * reads at a glance before transferring the file to the car, where Tesla's own
+ * Paint Shop renders it properly.
+ */
+export function buildMockupPrompt(input: MockupPromptInput): string {
+  return [
+    `Render a photorealistic studio image of a Tesla ${input.model.name}${input.model.subtitle ? ` (${input.model.subtitle})` : ''} with the supplied artwork applied as a printed vinyl wrap on its bodywork.`,
+    'The supplied image is the flattened wrap layout for this exact vehicle: the large panel near the top centre is the hood, the tall panels down each side are the doors and fenders, and the pieces along the top and bottom are the bumpers. Map that artwork onto the matching panels, preserving its colours, motifs, characters and overall composition so the car is clearly wearing this specific design.',
+    'The subject on the hood must read the right way up and face forward when viewed from the front of the car.',
+    'Show the whole car in a three-quarter front view, wheels included, lit like a showroom photograph on a clean neutral studio background with a soft floor reflection.',
+    'The panoramic roof is tinted glass and must stay dark glass — never wrapped or painted. Windows stay glass, and the tyres, badges and lights stay realistic.',
+    'No text overlays, no watermarks, no colour swatches or design-layout diagrams — just the finished car.',
+  ].join(' ')
+}
+
 export interface ConceptPromptInput {
   model: TeslaModel
   colorName: string

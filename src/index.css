@@ -368,6 +368,17 @@ textarea {
   color: #ff8a8a;
 }
 
+.mockup {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  margin-top: 16px;
+}
+
+.mockup-frame {
+  aspect-ratio: 16 / 10;
+}
+
 .model-note {
   color: #f0b429;
   font-size: 0.78rem;

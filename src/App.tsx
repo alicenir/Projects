@@ -8,12 +8,13 @@ import { TESLA_MODELS } from './data/models'
 import { TESLA_COLORS } from './data/colors'
 import { type WrapIntensity } from './data/themes'
 import { GEMINI_IMAGE_MODELS, GEMINI_TEXT_MODELS } from './data/geminiModels'
-import { buildWrapPrompt, buildConceptPrompt } from './lib/promptBuilder'
+import { buildWrapPrompt, buildConceptPrompt, buildMockupPrompt } from './lib/promptBuilder'
+import { flattenOnColor, splitDataUrl } from './lib/mockup'
 import { generateWrapImage, generateConceptText } from './lib/gemini'
 import { normalizeToWrapSpec, sanitizeWrapFilename } from './lib/imageSpec'
 import { fetchImageAsset, type FetchedImage } from './lib/templateAssets'
 import { maskToPanels } from './lib/panelMask'
-import type { WrapGenerationState } from './types'
+import type { WrapGenerationState, MockupState } from './types'
 
 const LS_KEY = 'tesla-wrap-studio:v2'
 
@@ -72,6 +73,7 @@ export default function App() {
   const [generation, setGeneration] = useState<WrapGenerationState>({ status: 'idle' })
   const [templateUrl, setTemplateUrl] = useState<string | null>(null)
   const [templateError, setTemplateError] = useState<string | null>(null)
+  const [mockup, setMockup] = useState<MockupState>({ status: 'idle' })
 
   const templateCache = useRef<Map<string, FetchedImage>>(new Map())
 
@@ -132,6 +134,8 @@ export default function App() {
       return
     }
 
+    // Any existing mockup belongs to the previous wrap.
+    setMockup({ status: 'idle' })
     setGeneration({ status: 'loading-image' })
     try {
       const basePrompt = buildWrapPrompt({
@@ -182,6 +186,26 @@ export default function App() {
       await runImageGeneration(concept)
     } catch (err) {
       setGeneration({ status: 'error', error: err instanceof Error ? err.message : 'Concept generation failed.' })
+    }
+  }
+
+  async function handlePreviewOnCar() {
+    if (!generation.dataUrl) return
+    setMockup({ status: 'loading' })
+    try {
+      // Show the unwrapped areas in the car's real paint colour rather than as
+      // transparency, which the model would otherwise render as holes.
+      const flattened = await flattenOnColor(generation.dataUrl, colorHex)
+      const { base64, mimeType } = splitDataUrl(flattened)
+      const result = await generateWrapImage(
+        prefs.apiKey.trim(),
+        prefs.geminiModelId,
+        buildMockupPrompt({ model, colorName }),
+        { base64, mimeType },
+      )
+      setMockup({ status: 'done', dataUrl: result.dataUrl })
+    } catch (err) {
+      setMockup({ status: 'error', error: err instanceof Error ? err.message : 'Could not render the preview.' })
     }
   }
 
@@ -246,6 +270,8 @@ export default function App() {
           onGenerate={handleGenerate}
           onAiWrapGeneration={handleAiWrapGeneration}
           onDownload={handleDownload}
+          mockup={mockup}
+          onPreviewOnCar={handlePreviewOnCar}
         />
 
         {!canGenerate && !templateError && (
