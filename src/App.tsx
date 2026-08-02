@@ -12,6 +12,7 @@ import { buildWrapPrompt, buildConceptPrompt } from './lib/promptBuilder'
 import { generateWrapImage, generateConceptText } from './lib/gemini'
 import { normalizeToWrapSpec, sanitizeWrapFilename } from './lib/imageSpec'
 import { fetchImageAsset, type FetchedImage } from './lib/templateAssets'
+import { maskToPanels } from './lib/panelMask'
 import type { WrapGenerationState } from './types'
 
 const LS_KEY = 'tesla-wrap-studio:v2'
@@ -119,7 +120,10 @@ export default function App() {
         base64: template.base64,
         mimeType: template.mimeType,
       })
-      const normalized = await normalizeToWrapSpec(raw.dataUrl, template.width, template.height)
+      // Clip the result to the template's real panels so nothing can land on the
+      // glass roof or the background, whatever the model actually drew.
+      const masked = await maskToPanels(raw.dataUrl, template.objectUrl)
+      const normalized = await normalizeToWrapSpec(masked.dataUrl, template.width, template.height)
 
       setGeneration({
         status: 'done',

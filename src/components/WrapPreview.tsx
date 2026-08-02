@@ -28,10 +28,10 @@ export function WrapPreview({
     <section className="card">
       <h2>5. Generate &amp; preview</h2>
       <p className="hint">
-        Generation edits Tesla's own official <strong>{model.name}</strong> template in place, so the design lands
-        inside the real panel outlines. Every panel — hood, doors, fenders, bumpers — gets filled, while the open
-        gap in the middle of the template stays white: that's the panoramic glass roof, which has no panel to wrap.
-        The focal subject of your design is placed on the hood, facing the front of the car.
+        Generation edits Tesla's own official <strong>{model.name}</strong> template, then clips the result to that
+        template's exact panel shapes. Artwork can only ever land on real body panels — the glass roof and
+        everything between the panels comes out transparent, guaranteed, no matter what the AI draws. The focal
+        subject of your design is placed on the hood, facing the front of the car.
       </p>
 
       <div className="preview-columns">
