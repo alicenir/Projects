@@ -259,9 +259,12 @@ export default function App() {
         prefs.apiKey.trim(),
         prefs.geminiModelId,
         buildMockupPrompt({ model, colorName }),
+        // Vehicle reference first: the leading image anchors what is being drawn,
+        // and burying it behind the wrap let the model default to a more familiar
+        // generation of the same nameplate.
         [
-          { base64, mimeType },
           { base64: vehicle.base64, mimeType: vehicle.mimeType },
+          { base64, mimeType },
         ],
       )
       setMockup({ status: 'done', dataUrl: result.dataUrl })

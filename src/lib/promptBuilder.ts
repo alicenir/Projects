@@ -84,11 +84,11 @@ export interface MockupPromptInput {
  */
 export function buildMockupPrompt(input: MockupPromptInput): string {
   return [
-    `You are given two images. The FIRST is a flattened vinyl wrap layout. The SECOND is a reference render of the exact vehicle it belongs to: a Tesla ${input.model.name}${input.model.subtitle ? ` (${input.model.subtitle})` : ''}.`,
+    `You are given two images. The FIRST is a reference render of the exact car to draw: a Tesla ${input.model.name}${input.model.subtitle ? ` (${input.model.subtitle})` : ''}. The SECOND is a flattened vinyl wrap layout.`,
 
-    'Render a photorealistic studio photograph of the car shown in the SECOND image, wearing the artwork from the FIRST image as a printed vinyl wrap.',
+    'Render a photorealistic studio photograph of the car from the FIRST image, wearing the artwork from the SECOND image as a printed vinyl wrap.',
 
-    'Match the vehicle in the second image exactly — its body shape, proportions, front and rear light signatures, bumpers, wheels and greenhouse. Tesla sells several generations that look quite different from each other, so reproduce the specific one shown rather than a generic or newer version of that nameplate.',
+    `THE CAR MUST BE THE EXACT VARIANT IN THE FIRST IMAGE. This one is ${input.model.renderNotes} Copy its front and rear light signatures, bumpers, body creases, proportions, greenhouse and wheels from that reference. Do not substitute a different model year, facelift or generation of the same nameplate, and do not fall back on a more familiar version of this car — study the reference and reproduce what is actually shown.`,
 
     'In the wrap layout, the large panel near the top centre is the hood, the tall panels down each side are the doors and fenders, and the pieces along the top and bottom are the bumpers. Map that artwork onto the matching panels, preserving its colours, motifs, characters and composition so the car is clearly wearing this specific design, with the hood subject upright and facing forward.',
 
