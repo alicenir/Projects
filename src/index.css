@@ -421,6 +421,12 @@ textarea {
   color: #ff8a8a;
 }
 
+.model-note {
+  color: #f0b429;
+  font-size: 0.78rem;
+  line-height: 1.4;
+}
+
 .panel-empty,
 .panel-error {
   color: var(--muted);

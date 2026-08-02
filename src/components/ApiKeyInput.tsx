@@ -10,6 +10,7 @@ interface Props {
 
 export function ApiKeyInput({ apiKey, onApiKeyChange, modelId, onModelChange }: Props) {
   const [reveal, setReveal] = useState(false)
+  const selectedModel = GEMINI_IMAGE_MODELS.find((m) => m.id === modelId)
 
   return (
     <section className="card">
@@ -47,6 +48,7 @@ export function ApiKeyInput({ apiKey, onApiKeyChange, modelId, onModelChange }: 
               </option>
             ))}
           </select>
+          {selectedModel?.note && <span className="model-note">⚠ {selectedModel.note}</span>}
         </label>
       </div>
     </section>

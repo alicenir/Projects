@@ -1,3 +1,5 @@
+import { GEMINI_IMAGE_MODELS } from '../data/geminiModels'
+
 export interface GeminiImageResult {
   dataUrl: string
   mimeType: string
@@ -102,8 +104,39 @@ async function callGenerateContent(
     } catch {
       detail = await res.text()
     }
+
+    if (res.status === 429) {
+      throw new Error(explainQuotaError(modelId, detail))
+    }
+    if (res.status === 400 && /api key/i.test(detail)) {
+      throw new Error('That API key was rejected. Check it was copied in full from aistudio.google.com/apikey.')
+    }
     throw new Error(`Gemini API error (${res.status}): ${detail || res.statusText}`)
   }
 
   return res.json()
+}
+
+/**
+ * Turns Google's raw 429 body into something actionable. Two very different
+ * situations share this status code: a model with no free quota at all
+ * (reported as "limit: 0"), and an ordinary rate limit that clears on its own.
+ */
+function explainQuotaError(modelId: string, detail: string): string {
+  const model = GEMINI_IMAGE_MODELS.find((m) => m.id === modelId)
+  const retrySeconds = /retry in ([\d.]+)s/i.exec(detail)?.[1]
+
+  if (/limit: 0/.test(detail) || model?.freeTier === 'no') {
+    const free = GEMINI_IMAGE_MODELS.find((m) => m.freeTier === 'yes')
+    return [
+      `${model?.label ?? modelId} has no free-tier quota on your account, so this request was rejected before it ran.`,
+      free ? `Switch the Model dropdown to “${free.label}”, which does have a free quota.` : '',
+      'Alternatively, enable billing on your Google Cloud project to use this model.',
+    ]
+      .filter(Boolean)
+      .join(' ')
+  }
+
+  const wait = retrySeconds ? ` Try again in about ${Math.ceil(Number(retrySeconds))} seconds.` : ''
+  return `Rate limit reached for ${model?.label ?? modelId}.${wait} Free-tier quotas reset daily.`
 }
