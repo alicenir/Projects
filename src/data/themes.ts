@@ -16,8 +16,9 @@ export const WRAP_THEMES: WrapTheme[] = [
 
 export type WrapIntensity = 'subtle' | 'balanced' | 'bold'
 
+/** All three fill every panel — these describe how busy the artwork inside them is. */
 export const WRAP_INTENSITIES: { id: WrapIntensity; label: string; description: string }[] = [
-  { id: 'subtle', label: 'Subtle', description: 'Mostly factory paint color with a small accent graphic' },
-  { id: 'balanced', label: 'Balanced', description: 'Even mix of theme artwork and factory color' },
-  { id: 'bold', label: 'Bold', description: 'Full-coverage themed graphic' },
+  { id: 'subtle', label: 'Subtle', description: 'Every panel covered, but clean and understated — flat colour with sparse detailing' },
+  { id: 'balanced', label: 'Balanced', description: 'Every panel covered, mixing detailed artwork with calmer areas' },
+  { id: 'bold', label: 'Bold', description: 'Every panel covered in dense, high-contrast artwork' },
 ]
