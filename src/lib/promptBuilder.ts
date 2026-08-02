@@ -33,6 +33,12 @@ const INTENSITY_COPY: Record<WrapIntensity, string> = {
  * Tesla's own example wraps (e.g. model3-2024-base/example/Doge.png): every
  * enclosed outline is filled edge to edge, and only the large empty region in the
  * middle of the canvas — the glass roof, which has no panel outline — stays white.
+ *
+ * Orientation is stated in image-space rather than as "the front of the car",
+ * which the model has no way to locate. model3-2024-base/example/Reindeer.png
+ * fixes the mapping: the red nose sits on the hood panel's top edge and the ears
+ * land on the mirror ovals below it, so the top of the canvas is the car's nose
+ * and the bottom is its tail.
  */
 export function buildWrapPrompt(input: WrapPromptInput): string {
   const trimmedDescription = input.description.trim()
@@ -54,7 +60,7 @@ export function buildWrapPrompt(input: WrapPromptInput): string {
 
     `The car's factory paint colour is "${input.colorName}" (hex ${input.colorHex}). Use that colour family as the harmonizing base or accent throughout so the wrap sits naturally against the paint still visible on the car.`,
 
-    'Orientation: the hood panel is the wide shape near the centre with two small rounded cutouts at its lower corners. Compose the focal subject on it upright and facing outward toward the front of the car — never rotated, upside down, sideways, or facing the rear.',
+    'ORIENTATION — THE TOP EDGE OF THE IMAGE IS THE FRONT OF THE CAR. The bottom edge is the rear. The large panel near the top centre is the hood, and its upper edge is the leading edge at the car\'s nose. Rotate the focal subject so it faces, points, looks or travels toward the TOP EDGE of the image: a character\'s head and gaze toward the top, a vehicle or animal nose-first toward the top, any motion or speed lines running toward the top. Never orient the subject toward the bottom, left or right edge, and never place it sideways or upside down.',
 
     'Render flat and evenly lit like a printable vinyl wrap texture — no drop shadows, no 3D car mockup, no reflections, no watermark, no added text unless the brief calls for it.',
   ]

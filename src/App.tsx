@@ -18,7 +18,7 @@ import type { WrapGenerationState } from './types'
 const LS_KEY = 'tesla-wrap-studio:v2'
 
 const BLANK_PANEL_CORRECTION =
-  'RETRY — your previous attempt left an entire panel white and unpainted, most likely the large hood panel near the top centre. Paint over EVERY part of the image this time, especially that large top-centre panel. No region of the output may be white, blank or unpainted.'
+  'RETRY — your previous attempt left an entire panel white and unpainted, most likely the large hood panel near the top centre. Paint over EVERY part of the image this time, especially that large top-centre panel, and keep the focal subject on it facing the TOP EDGE of the image. No region of the output may be white, blank or unpainted.'
 
 interface PersistedPrefs {
   apiKey: string
