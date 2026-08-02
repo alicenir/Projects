@@ -13,7 +13,7 @@ import { flattenOnColor, splitDataUrl } from './lib/mockup'
 import { generateWrapImage, generateConceptText } from './lib/gemini'
 import { normalizeToWrapSpec, sanitizeWrapFilename } from './lib/imageSpec'
 import { fetchImageAsset, type FetchedImage } from './lib/templateAssets'
-import { maskToPanels, findHoodPanel, rotateHoodArtwork, type HoodPanel } from './lib/panelMask'
+import { maskToPanels, findHoodPanel, rotateHoodInSource, type HoodPanel } from './lib/panelMask'
 import type { WrapGenerationState, MockupState, HoodRotation } from './types'
 
 const LS_KEY = 'tesla-wrap-studio:v2'
@@ -212,11 +212,14 @@ export default function App() {
     setHoodRotation(degrees)
     try {
       const hood = await getHoodPanel(template)
-      // Always re-derive from the unrotated base so repeated clicks don't compound.
-      const rotated =
-        hood && degrees !== 0
-          ? await rotateHoodArtwork(generation.baseDataUrl, generation.sourceDataUrl, hood, degrees)
-          : generation.baseDataUrl
+      // Always re-derive from the unrotated source so repeated clicks don't compound,
+      // and re-mask afterwards so the rotated wrap gets the same clipping and
+      // blank-panel refill as a freshly generated one.
+      let rotated = generation.baseDataUrl
+      if (hood && degrees !== 0) {
+        const rotatedSource = await rotateHoodInSource(generation.sourceDataUrl, hood, degrees)
+        rotated = (await maskToPanels(rotatedSource, template.objectUrl)).dataUrl
+      }
       const normalized = await normalizeToWrapSpec(rotated, template.width, template.height)
       setGeneration((g) => ({
         ...g,

@@ -34,6 +34,120 @@ const SIGNIFICANT_PANEL = 0.004
 /** Above this share of near-white pixels, a panel is treated as left blank. */
 const BLANK_THRESHOLD = 0.9
 
+/** A panel more than this fraction near-white is treated as skipped and refilled. */
+const REFILL_THRESHOLD = 0.6
+
+function isPale(data: Uint8ClampedArray, i: number): boolean {
+  return data[i] > NEAR_WHITE && data[i + 1] > NEAR_WHITE && data[i + 2] > NEAR_WHITE
+}
+
+/**
+ * Repaints panels the model left blank using colour from the nearest artwork.
+ *
+ * The image model regularly skips narrow panels — pillar strips especially — and
+ * leaves them white, which reads as a hole in the finished wrap. Whole components
+ * that came back predominantly pale are flooded outward from the surrounding
+ * painted pixels, so each blank panel picks up the colours adjacent to it rather
+ * than a flat guess.
+ *
+ * Panels that are merely partly white are left alone: white is a legitimate design
+ * choice, and only wholesale misses are treated as errors.
+ */
+function refillBlankRegions(
+  width: number,
+  height: number,
+  paintable: Uint8Array,
+  data: Uint8ClampedArray,
+): number {
+  const seen = new Uint8Array(width * height)
+  const target = new Uint8Array(width * height)
+  let refilled = 0
+
+  for (let start = 0; start < paintable.length; start++) {
+    if (!paintable[start] || seen[start]) continue
+
+    const stack = [start]
+    seen[start] = 1
+    const pixels: number[] = []
+    let pale = 0
+
+    while (stack.length) {
+      const p = stack.pop()!
+      pixels.push(p)
+      if (isPale(data, p * 4)) pale++
+      const x = p % width
+      const y = (p - x) / width
+      const neighbours = [
+        x + 1 < width ? p + 1 : -1,
+        x - 1 >= 0 ? p - 1 : -1,
+        y + 1 < height ? p + width : -1,
+        y - 1 >= 0 ? p - width : -1,
+      ]
+      for (const n of neighbours) {
+        if (n >= 0 && paintable[n] && !seen[n]) {
+          seen[n] = 1
+          stack.push(n)
+        }
+      }
+    }
+
+    if (pale / pixels.length > REFILL_THRESHOLD) {
+      for (const p of pixels) target[p] = 1
+      refilled++
+    }
+  }
+
+  if (!refilled) return 0
+
+  // Multi-source BFS outward from every painted pixel, so each blank pixel takes
+  // the colour of the nearest real artwork.
+  //
+  // The search deliberately spreads across the whole canvas rather than staying
+  // inside panels: panels are isolated islands separated by outline pixels, so a
+  // fill confined to paintable area could never reach a panel that came back
+  // entirely blank — which is exactly the case being repaired. Colour is only
+  // ever written into target pixels; everything else merely relays it.
+  const visited = new Uint8Array(width * height)
+  const originOf = new Int32Array(width * height)
+  const queue: number[] = []
+
+  for (let p = 0; p < paintable.length; p++) {
+    if (paintable[p] && !target[p] && !isPale(data, p * 4)) {
+      visited[p] = 1
+      originOf[p] = p
+      queue.push(p)
+    }
+  }
+
+  for (let head = 0; head < queue.length; head++) {
+    const p = queue[head]
+    const x = p % width
+    const y = (p - x) / width
+    const neighbours = [
+      x + 1 < width ? p + 1 : -1,
+      x - 1 >= 0 ? p - 1 : -1,
+      y + 1 < height ? p + width : -1,
+      y - 1 >= 0 ? p - width : -1,
+    ]
+    for (const n of neighbours) {
+      if (n < 0 || visited[n]) continue
+      visited[n] = 1
+      originOf[n] = originOf[p]
+      if (target[n]) {
+        const src = originOf[n] * 4
+        const dst = n * 4
+        data[dst] = data[src]
+        data[dst + 1] = data[src + 1]
+        data[dst + 2] = data[src + 2]
+        data[dst + 3] = 255
+      }
+      queue.push(n)
+    }
+  }
+
+  return refilled
+}
+
 /**
  * Labels each connected panel interior and counts how many significant ones came
  * back essentially white. The image model intermittently skips a panel — most
@@ -249,21 +363,21 @@ export async function findHoodPanel(templateDataUrl: string): Promise<HoodPanel 
 }
 
 /**
- * Rotates only the hood panel's artwork about the panel's centroid, leaving every
- * other panel untouched.
+ * Rotates the hood region within the raw, unmasked model output, returning another
+ * full-canvas image.
  *
- * Rotation samples from `sourceDataUrl` — the raw generated image before masking,
- * which is opaque across the whole canvas — rather than from the already-masked
- * wrap. Rotating the masked version drags its transparent surroundings into the
- * panel's corners, which then render as black wedges.
+ * Deliberately operates before masking so the caller can run the result back
+ * through maskToPanels: the rotated wrap then goes through exactly the same
+ * clipping and blank-panel refill as a freshly generated one, instead of needing a
+ * parallel code path. Rotating the already-masked wrap would also drag its
+ * transparent surroundings into the panel corners as black wedges.
  */
-export async function rotateHoodArtwork(
-  maskedDataUrl: string,
+export async function rotateHoodInSource(
   sourceDataUrl: string,
   hood: HoodPanel,
   degrees: number,
 ): Promise<string> {
-  const [art, source] = await Promise.all([loadImage(maskedDataUrl), loadImage(sourceDataUrl)])
+  const source = await loadImage(sourceDataUrl)
   const { width, height } = hood
 
   const base = document.createElement('canvas')
@@ -271,7 +385,7 @@ export async function rotateHoodArtwork(
   base.height = height
   const baseCtx = base.getContext('2d', { willReadFrequently: true })
   if (!baseCtx) throw new Error('Canvas 2D context unavailable.')
-  baseCtx.drawImage(art, 0, 0, width, height)
+  baseCtx.drawImage(source, 0, 0, width, height)
   const original = baseCtx.getImageData(0, 0, width, height)
 
   const rotated = document.createElement('canvas')
@@ -349,6 +463,8 @@ export async function maskToPanels(generatedDataUrl: string, templateDataUrl: st
   }
 
   const blankPanels = countBlankPanels(width, height, paintable, artData.data)
+  // Repaint anything the model skipped before it reaches the user.
+  refillBlankRegions(width, height, paintable, artData.data)
   artCtx.putImageData(artData, 0, 0)
 
   return {
