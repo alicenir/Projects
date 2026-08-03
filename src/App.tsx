@@ -16,7 +16,6 @@ import { generateWrapImage, generateConceptText } from './lib/gemini'
 import { normalizeToWrapSpec, buildWrapFilename } from './lib/imageSpec'
 import { fetchImageAsset, type FetchedImage } from './lib/templateAssets'
 import { maskToPanels, findHoodPanel, rotateHoodInSource, type HoodPanel } from './lib/panelMask'
-import { drawTextOnWrap } from './lib/textOverlay'
 import type { WrapGenerationState, MockupState, HoodRotation } from './types'
 
 const LS_KEY = 'tesla-wrap-studio:v2'
@@ -38,8 +37,6 @@ interface PersistedPrefs {
   intensity: WrapIntensity
   customText: string
   customTextPlacement: TextPlacementId
-  /** Draw lettering with canvas (exact) instead of asking the model for it. */
-  customTextExact: boolean
 }
 
 function loadPrefs(): PersistedPrefs {
@@ -76,7 +73,6 @@ function defaultPrefs(): PersistedPrefs {
     intensity: 'balanced',
     customText: '',
     customTextPlacement: 'doors',
-    customTextExact: true,
   }
 }
 
@@ -143,12 +139,6 @@ export default function App() {
     return { ...masked, sourceDataUrl: raw.dataUrl }
   }
 
-  /** Composites exact lettering after masking, when the user opted for canvas text. */
-  async function applyLettering(maskedUrl: string, template: FetchedImage) {
-    if (!prefs.customTextExact || !prefs.customText.trim()) return maskedUrl
-    return drawTextOnWrap(maskedUrl, template.objectUrl, prefs.customText, prefs.customTextPlacement)
-  }
-
   async function runImageGeneration(description: string) {
     const template = templateCache.current.get(model.id)
     if (!template) {
@@ -166,7 +156,7 @@ export default function App() {
         colorName,
         description,
         intensity: prefs.intensity,
-        customText: prefs.customTextExact ? undefined : prefs.customText,
+        customText: prefs.customText,
         customTextPlacement: TEXT_PLACEMENTS.find((p) => p.id === prefs.customTextPlacement)?.prompt,
       })
 
@@ -178,8 +168,7 @@ export default function App() {
         masked = await generateAndMask(`${basePrompt} ${BLANK_PANEL_CORRECTION}`, template)
       }
 
-      const lettered = await applyLettering(masked.dataUrl, template)
-      const normalized = await normalizeToWrapSpec(lettered, template.width, template.height)
+      const normalized = await normalizeToWrapSpec(masked.dataUrl, template.width, template.height)
       setHoodRotation(0)
 
       setGeneration({
@@ -241,9 +230,7 @@ export default function App() {
         const rotatedSource = await rotateHoodInSource(generation.sourceDataUrl, hood, degrees)
         rotated = (await maskToPanels(rotatedSource, template.objectUrl)).dataUrl
       }
-      // baseDataUrl is kept free of lettering so it can be re-applied cleanly here
-      // rather than being rotated along with the artwork.
-      const normalized = await normalizeToWrapSpec(await applyLettering(rotated, template), template.width, template.height)
+      const normalized = await normalizeToWrapSpec(rotated, template.width, template.height)
       setGeneration((g) => ({
         ...g,
         dataUrl: normalized.dataUrl,
@@ -365,12 +352,10 @@ export default function App() {
           intensity={prefs.intensity}
           customText={prefs.customText}
           customTextPlacement={prefs.customTextPlacement}
-          customTextExact={prefs.customTextExact}
           onDescriptionChange={(description) => setPrefs((p) => ({ ...p, description }))}
           onIntensityChange={(intensity) => setPrefs((p) => ({ ...p, intensity }))}
           onCustomTextChange={(customText) => setPrefs((p) => ({ ...p, customText }))}
           onCustomTextPlacementChange={(customTextPlacement) => setPrefs((p) => ({ ...p, customTextPlacement }))}
-          onCustomTextExactChange={(customTextExact) => setPrefs((p) => ({ ...p, customTextExact }))}
         />
 
         {templateError && <p className="hint error-text">{templateError}</p>}
