@@ -5,12 +5,14 @@ import { ColorPicker } from './components/ColorPicker'
 import { PromptComposer } from './components/PromptComposer'
 import { WrapPreview } from './components/WrapPreview'
 import { PortPanel } from './components/PortPanel'
+import { ConceptDialog } from './components/ConceptDialog'
 import { TESLA_MODELS } from './data/models'
 import { TESLA_COLORS } from './data/colors'
 import { type WrapIntensity } from './data/themes'
 import { GEMINI_IMAGE_MODELS, GEMINI_TEXT_MODELS } from './data/geminiModels'
 import { VIEW_ANGLES } from './data/viewAngles'
 import { TEXT_PLACEMENTS, type TextPlacementId } from './data/textPlacements'
+import { DEFAULT_BRIEF, briefToPrompt, type BriefAnswers } from './data/conceptBrief'
 import { buildWrapPrompt, buildConceptPrompt, buildMockupPrompt, buildPortPrompt } from './lib/promptBuilder'
 import { flattenOnColor, splitDataUrl } from './lib/mockup'
 import { generateWrapImage, generateConceptText } from './lib/gemini'
@@ -85,6 +87,8 @@ export default function App() {
   const [mockup, setMockup] = useState<MockupState>(EMPTY_MOCKUP)
   const [hoodRotation, setHoodRotation] = useState<HoodRotation>(0)
   const [ports, setPorts] = useState<Record<string, PortedWrap>>({})
+  const [briefOpen, setBriefOpen] = useState(false)
+  const [brief, setBrief] = useState<BriefAnswers>(DEFAULT_BRIEF)
 
   const templateCache = useRef<Map<string, FetchedImage>>(new Map())
   const hoodCache = useRef<Map<string, HoodPanel | null>>(new Map())
@@ -194,12 +198,18 @@ export default function App() {
   }
 
   async function handleAiWrapGeneration() {
+    setBriefOpen(true)
+  }
+
+  async function runConceptGeneration() {
+    setBriefOpen(false)
     setGeneration({ status: 'loading-concept' })
     try {
       const conceptPrompt = buildConceptPrompt({
         model,
         colorName,
         themeHint: prefs.description.trim() || undefined,
+        brief: briefToPrompt(brief),
       })
       const concept = await generateConceptText(prefs.apiKey.trim(), prefs.geminiTextModelId, conceptPrompt)
       setPrefs((p) => ({ ...p, description: concept }))
@@ -451,6 +461,16 @@ export default function App() {
           <p className="hint center">Add your API key above to enable generation.</p>
         )}
       </main>
+
+      {briefOpen && (
+        <ConceptDialog
+          answers={brief}
+          existingPrompt={prefs.description}
+          onChange={setBrief}
+          onCancel={() => setBriefOpen(false)}
+          onGenerate={() => void runConceptGeneration()}
+        />
+      )}
 
       <footer className="app-footer">
         <p>

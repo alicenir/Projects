@@ -157,15 +157,27 @@ export interface ConceptPromptInput {
   model: TeslaModel
   colorName: string
   themeHint?: string
+  /** Preferences collected from the concept questionnaire; empty means no steer. */
+  brief?: string
 }
 
 /** Builds the short brief used to ask Gemini to invent a wrap concept for "AI Wrap Generation". */
 export function buildConceptPrompt(input: ConceptPromptInput): string {
+  const brief = input.brief?.trim()
+
   return [
     `Invent one creative, visually striking custom vinyl wrap concept for a Tesla ${input.model.name} that is factory-painted "${input.colorName}".`,
+
+    brief ? `Follow these preferences: ${brief}` : '',
+
     input.themeHint
-      ? `Draw inspiration from this theme: ${input.themeHint}.`
-      : 'You may draw from gaming, movies, TV shows, anime, motorsport, nature, or abstract art — pick whatever would look best.',
+      ? `Also draw inspiration from this starting point: ${input.themeHint}.`
+      : brief
+        ? ''
+        : 'You may draw from gaming, movies, TV shows, anime, motorsport, nature, or abstract art — pick whatever would look best.',
+
     'Reply with only a single vivid 1-3 sentence design description suitable to hand directly to an image generator, with no preamble, no title, and no quotation marks.',
-  ].join(' ')
+  ]
+    .filter(Boolean)
+    .join(' ')
 }

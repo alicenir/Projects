@@ -500,3 +500,45 @@ textarea {
 .port-thumb {
   aspect-ratio: 1 / 1;
 }
+
+.dialog-backdrop {
+  position: fixed;
+  inset: 0;
+  background: rgba(0, 0, 0, 0.65);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 20px;
+  z-index: 50;
+}
+
+.dialog {
+  background: var(--panel);
+  border: 1px solid var(--border);
+  border-radius: 14px;
+  padding: 22px 24px;
+  width: 100%;
+  max-width: 620px;
+  max-height: 90vh;
+  overflow-y: auto;
+}
+
+.dialog h3 {
+  margin: 0 0 8px;
+  font-size: 1.15rem;
+}
+
+.dialog-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(240px, 1fr));
+  gap: 0 16px;
+}
+
+.dialog .panel-actions {
+  margin-top: 8px;
+  justify-content: flex-end;
+}
+
+.dialog .panel-actions button {
+  flex: 0 0 auto;
+}
