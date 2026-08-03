@@ -496,3 +496,7 @@ textarea {
   color: var(--muted);
   font-size: 0.8rem;
 }
+
+.port-thumb {
+  aspect-ratio: 1 / 1;
+}

@@ -83,6 +83,42 @@ export function buildWrapPrompt(input: WrapPromptInput): string {
     .join(' ')
 }
 
+export interface PortPromptInput {
+  target: TeslaModel
+  colorHex: string
+  colorName: string
+}
+
+/**
+ * Builds the instruction for re-laying an existing wrap onto a different vehicle's
+ * template.
+ *
+ * The layouts genuinely differ — measured panel-area overlap between the Model Y
+ * (2025+) Premium template and the others runs from 93% for the Performance trim
+ * down to 15% for the Cybertruck — so the same PNG cannot simply be reused. The
+ * design has to be redrawn against the new panel shapes, which is what this asks
+ * for: same artwork, different arrangement.
+ */
+export function buildPortPrompt(input: PortPromptInput): string {
+  return [
+    `You are given two images. The FIRST is a finished vinyl wrap design made for a different Tesla. The SECOND is the blank wrap template for a Tesla ${input.target.name}${input.target.subtitle ? ` (${input.target.subtitle})` : ''}.`,
+
+    'Recreate the SAME design from the first image onto the second image\'s layout. Keep its colours, motifs, characters, typography, mood and overall style recognisably identical — someone seeing both should say it is the same wrap on a different car.',
+
+    'The two layouts are NOT the same: the panels are different shapes, different sizes and in different positions. Do not copy the first image pixel for pixel or paste it on top. Re-compose the design to suit the second template\'s panels, stretching, re-tiling and rearranging elements as needed so each panel is filled sensibly.',
+
+    'CRITICAL — LEAVE NOTHING WHITE. Cover the entire second image with artwork, edge to edge, including the large panel near the top centre (the hood), every door, fender, pillar and bumper piece, and the space between them. No white, blank or unpainted area anywhere.',
+
+    'Do not worry about staying inside the printed outlines: the areas that must not be wrapped are cut out automatically afterwards. Use the outlines only as a guide to where the panels sit.',
+
+    'ORIENTATION — the TOP EDGE of the image is the FRONT of the car. Put the design\'s main focal subject on the large hood panel near the top centre, facing and pointing toward the top edge, never sideways or upside down.',
+
+    `The car's factory paint colour is "${input.colorName}" (hex ${input.colorHex}); keep using that colour family as the harmonizing base or accent.`,
+
+    'Render flat and evenly lit like a printable vinyl wrap texture — no drop shadows, no 3D car mockup, no reflections, no watermark.',
+  ].join(' ')
+}
+
 export interface MockupPromptInput {
   model: TeslaModel
   colorName: string

@@ -15,6 +15,16 @@ export interface MockupState {
 
 export type HoodRotation = 0 | 90 | 180 | 270
 
+/** A copy of the current wrap re-laid onto another vehicle's template. */
+export interface PortedWrap {
+  status: 'loading' | 'done' | 'error'
+  dataUrl?: string
+  width?: number
+  height?: number
+  sizeBytes?: number
+  error?: string
+}
+
 export interface WrapGenerationState {
   status: 'idle' | 'loading-concept' | 'loading-image' | 'done' | 'error'
   dataUrl?: string

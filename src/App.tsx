@@ -4,19 +4,20 @@ import { ModelSelector } from './components/ModelSelector'
 import { ColorPicker } from './components/ColorPicker'
 import { PromptComposer } from './components/PromptComposer'
 import { WrapPreview } from './components/WrapPreview'
+import { PortPanel } from './components/PortPanel'
 import { TESLA_MODELS } from './data/models'
 import { TESLA_COLORS } from './data/colors'
 import { type WrapIntensity } from './data/themes'
 import { GEMINI_IMAGE_MODELS, GEMINI_TEXT_MODELS } from './data/geminiModels'
 import { VIEW_ANGLES } from './data/viewAngles'
 import { TEXT_PLACEMENTS, type TextPlacementId } from './data/textPlacements'
-import { buildWrapPrompt, buildConceptPrompt, buildMockupPrompt } from './lib/promptBuilder'
+import { buildWrapPrompt, buildConceptPrompt, buildMockupPrompt, buildPortPrompt } from './lib/promptBuilder'
 import { flattenOnColor, splitDataUrl } from './lib/mockup'
 import { generateWrapImage, generateConceptText } from './lib/gemini'
 import { normalizeToWrapSpec, buildWrapFilename } from './lib/imageSpec'
 import { fetchImageAsset, type FetchedImage } from './lib/templateAssets'
 import { maskToPanels, findHoodPanel, rotateHoodInSource, type HoodPanel } from './lib/panelMask'
-import type { WrapGenerationState, MockupState, HoodRotation } from './types'
+import type { WrapGenerationState, MockupState, HoodRotation, PortedWrap } from './types'
 
 const LS_KEY = 'tesla-wrap-studio:v2'
 
@@ -83,6 +84,7 @@ export default function App() {
   const [templateError, setTemplateError] = useState<string | null>(null)
   const [mockup, setMockup] = useState<MockupState>(EMPTY_MOCKUP)
   const [hoodRotation, setHoodRotation] = useState<HoodRotation>(0)
+  const [ports, setPorts] = useState<Record<string, PortedWrap>>({})
 
   const templateCache = useRef<Map<string, FetchedImage>>(new Map())
   const hoodCache = useRef<Map<string, HoodPanel | null>>(new Map())
@@ -146,8 +148,9 @@ export default function App() {
       return
     }
 
-    // Any existing mockup belongs to the previous wrap.
+    // Any existing mockup or ported copy belongs to the previous wrap.
     setMockup(EMPTY_MOCKUP)
+    setPorts({})
     setGeneration({ status: 'loading-image' })
     try {
       const basePrompt = buildWrapPrompt({
@@ -305,6 +308,64 @@ export default function App() {
     void renderAngle(next)
   }
 
+  /** Redraws the current wrap onto another vehicle's template. */
+  async function handlePortToModel(targetId: string) {
+    const target = TESLA_MODELS.find((m) => m.id === targetId)
+    if (!target || !generation.dataUrl) return
+
+    setPorts((p) => ({ ...p, [targetId]: { status: 'loading' } }))
+    try {
+      let template = templateCache.current.get(target.id)
+      if (!template) {
+        template = await fetchImageAsset(target.templateUrl)
+        templateCache.current.set(target.id, template)
+      }
+
+      // Show unwrapped areas as paint rather than transparency, so the model reads
+      // the source as a finished design rather than one full of holes.
+      const flattened = await flattenOnColor(generation.dataUrl, colorHex)
+      const source = splitDataUrl(flattened)
+
+      const raw = await generateWrapImage(
+        prefs.apiKey.trim(),
+        prefs.geminiModelId,
+        buildPortPrompt({ target, colorHex, colorName }),
+        [
+          { base64: source.base64, mimeType: source.mimeType },
+          { base64: template.base64, mimeType: template.mimeType },
+        ],
+      )
+      const masked = await maskToPanels(raw.dataUrl, template.objectUrl)
+      const normalized = await normalizeToWrapSpec(masked.dataUrl, template.width, template.height)
+
+      setPorts((p) => ({
+        ...p,
+        [targetId]: {
+          status: 'done',
+          dataUrl: normalized.dataUrl,
+          width: normalized.width,
+          height: normalized.height,
+          sizeBytes: normalized.sizeBytes,
+        },
+      }))
+    } catch (err) {
+      setPorts((p) => ({
+        ...p,
+        [targetId]: { status: 'error', error: err instanceof Error ? err.message : 'Could not port the design.' },
+      }))
+    }
+  }
+
+  function handlePortDownload(targetId: string) {
+    const port = ports[targetId]
+    const target = TESLA_MODELS.find((m) => m.id === targetId)
+    if (!port?.dataUrl || !target) return
+    const a = document.createElement('a')
+    a.href = port.dataUrl
+    a.download = `${buildWrapFilename(`${target.name} ${prefs.description || 'wrap'}`)}.png`
+    a.click()
+  }
+
   function handleDownload() {
     if (!generation.dataUrl) return
     const a = document.createElement('a')
@@ -375,6 +436,16 @@ export default function App() {
           hoodRotation={hoodRotation}
           onHoodRotation={handleHoodRotation}
         />
+
+        {generation.status === 'done' && (
+          <PortPanel
+            sourceModel={model}
+            ports={ports}
+            busy={Object.values(ports).some((p) => p.status === 'loading')}
+            onPort={handlePortToModel}
+            onDownload={handlePortDownload}
+          />
+        )}
 
         {!canGenerate && !templateError && (
           <p className="hint center">Add your API key above to enable generation.</p>
