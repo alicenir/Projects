@@ -1,15 +1,30 @@
 import { WRAP_THEMES, WRAP_INTENSITIES, type WrapIntensity } from '../data/themes'
+import { TEXT_PLACEMENTS, type TextPlacementId } from '../data/textPlacements'
 
 const MAX_PROMPT_LENGTH = 4000
+const MAX_CUSTOM_TEXT = 40
 
 interface Props {
   description: string
   intensity: WrapIntensity
+  customText: string
+  customTextPlacement: TextPlacementId
   onDescriptionChange: (description: string) => void
   onIntensityChange: (intensity: WrapIntensity) => void
+  onCustomTextChange: (text: string) => void
+  onCustomTextPlacementChange: (placement: TextPlacementId) => void
 }
 
-export function PromptComposer({ description, intensity, onDescriptionChange, onIntensityChange }: Props) {
+export function PromptComposer({
+  description,
+  intensity,
+  customText,
+  customTextPlacement,
+  onDescriptionChange,
+  onIntensityChange,
+  onCustomTextChange,
+  onCustomTextPlacementChange,
+}: Props) {
   function addTitle(title: string) {
     if (!title) return
     // Only the first pick needs to set the scene; later ones just name another
@@ -87,6 +102,42 @@ export function PromptComposer({ description, intensity, onDescriptionChange, on
           rows={6}
         />
       </div>
+
+      <div className="row">
+        <label className="field">
+          <span>
+            Custom text on the wrap (optional, {customText.length}/{MAX_CUSTOM_TEXT})
+          </span>
+          <input
+            type="text"
+            value={customText}
+            maxLength={MAX_CUSTOM_TEXT}
+            onChange={(e) => onCustomTextChange(e.target.value)}
+            placeholder="e.g. Tesla Camping Trip"
+          />
+        </label>
+        <label className="field">
+          <span>Where to put it</span>
+          <select
+            value={customTextPlacement}
+            disabled={!customText.trim()}
+            onChange={(e) => onCustomTextPlacementChange(e.target.value as TextPlacementId)}
+          >
+            {TEXT_PLACEMENTS.map((p) => (
+              <option key={p.id} value={p.id}>
+                {p.label}
+              </option>
+            ))}
+          </select>
+        </label>
+      </div>
+
+      {customText.trim() && (
+        <p className="hint model-note">
+          ⚠ Image models often misspell lettering. Check the result carefully and regenerate if the text comes out
+          wrong — shorter phrases are far more reliable than long ones.
+        </p>
+      )}
 
       <label className="field">
         <span>Coverage intensity</span>

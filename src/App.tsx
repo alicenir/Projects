@@ -9,6 +9,7 @@ import { TESLA_COLORS } from './data/colors'
 import { type WrapIntensity } from './data/themes'
 import { GEMINI_IMAGE_MODELS, GEMINI_TEXT_MODELS } from './data/geminiModels'
 import { VIEW_ANGLES } from './data/viewAngles'
+import { TEXT_PLACEMENTS, type TextPlacementId } from './data/textPlacements'
 import { buildWrapPrompt, buildConceptPrompt, buildMockupPrompt } from './lib/promptBuilder'
 import { flattenOnColor, splitDataUrl } from './lib/mockup'
 import { generateWrapImage, generateConceptText } from './lib/gemini'
@@ -34,6 +35,8 @@ interface PersistedPrefs {
   customName: string
   description: string
   intensity: WrapIntensity
+  customText: string
+  customTextPlacement: TextPlacementId
 }
 
 function loadPrefs(): PersistedPrefs {
@@ -68,6 +71,8 @@ function defaultPrefs(): PersistedPrefs {
     customName: 'Custom color',
     description: '',
     intensity: 'balanced',
+    customText: '',
+    customTextPlacement: 'doors',
   }
 }
 
@@ -151,6 +156,8 @@ export default function App() {
         colorName,
         description,
         intensity: prefs.intensity,
+        customText: prefs.customText,
+        customTextPlacement: TEXT_PLACEMENTS.find((p) => p.id === prefs.customTextPlacement)?.prompt,
       })
 
       // The model intermittently leaves a whole panel — usually the hood — unpainted.
@@ -343,8 +350,12 @@ export default function App() {
         <PromptComposer
           description={prefs.description}
           intensity={prefs.intensity}
+          customText={prefs.customText}
+          customTextPlacement={prefs.customTextPlacement}
           onDescriptionChange={(description) => setPrefs((p) => ({ ...p, description }))}
           onIntensityChange={(intensity) => setPrefs((p) => ({ ...p, intensity }))}
+          onCustomTextChange={(customText) => setPrefs((p) => ({ ...p, customText }))}
+          onCustomTextPlacementChange={(customTextPlacement) => setPrefs((p) => ({ ...p, customTextPlacement }))}
         />
 
         {templateError && <p className="hint error-text">{templateError}</p>}

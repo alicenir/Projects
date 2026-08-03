@@ -7,6 +7,10 @@ export interface WrapPromptInput {
   colorName: string
   description: string
   intensity: WrapIntensity
+  /** Optional lettering the user wants rendered on the wrap. */
+  customText?: string
+  /** Placement instruction from TEXT_PLACEMENTS, used only when customText is set. */
+  customTextPlacement?: string
 }
 
 /**
@@ -62,7 +66,11 @@ export function buildWrapPrompt(input: WrapPromptInput): string {
 
     'ORIENTATION — THE TOP EDGE OF THE IMAGE IS THE FRONT OF THE CAR. The bottom edge is the rear. The large panel near the top centre is the hood, and its upper edge is the leading edge at the car\'s nose. Rotate the focal subject so it faces, points, looks or travels toward the TOP EDGE of the image: a character\'s head and gaze toward the top, a vehicle or animal nose-first toward the top, any motion or speed lines running toward the top. Never orient the subject toward the bottom, left or right edge, and never place it sideways or upside down.',
 
-    'Render flat and evenly lit like a printable vinyl wrap texture — no drop shadows, no 3D car mockup, no reflections, no watermark, no added text unless the brief calls for it.',
+    input.customText?.trim()
+      ? `LETTERING — the wrap must include this exact text: "${input.customText.trim()}". Reproduce it letter for letter, spelled exactly as written, with no extra words, no invented sponsor names and no duplicated copies scattered around. Set it in a typeface that suits the design, large enough to read easily, in a colour that contrasts with what sits behind it. ${input.customTextPlacement ?? ''}`
+      : '',
+
+    `Render flat and evenly lit like a printable vinyl wrap texture — no drop shadows, no 3D car mockup, no reflections, no watermark${input.customText?.trim() ? '' : ', no added text unless the brief calls for it'}.`,
   ]
     .filter(Boolean)
     .join(' ')
