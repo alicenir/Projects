@@ -46,6 +46,7 @@ const INTENSITY_COPY: Record<WrapIntensity, string> = {
  */
 export function buildWrapPrompt(input: WrapPromptInput): string {
   const trimmedDescription = input.description.trim()
+  const lettering = input.customText?.trim()
 
   return [
     `You are given the official flattened wrap template for a Tesla ${input.model.name}${input.model.subtitle ? ` (${input.model.subtitle})` : ''}, from Tesla's teslamotors/custom-wraps repository.`,
@@ -58,6 +59,13 @@ export function buildWrapPrompt(input: WrapPromptInput): string {
 
     `Design brief: ${trimmedDescription || 'An eye-catching, high-quality automotive wrap design.'}`,
 
+    // Sits with the design brief rather than among the rendering notes: buried near
+    // the end of a 3000-character prompt it was simply ignored, because by then the
+    // composition had already been decided.
+    lettering
+      ? `REQUIRED LETTERING — this design MUST include the words "${lettering}" rendered as visible text on the wrap. This is not optional and must not be omitted. Reproduce it letter for letter, exactly as written, once only: no extra words, no invented sponsor names, no duplicated copies scattered around. Set it in a typeface suiting the design, large enough to read easily, in a colour that contrasts with whatever sits behind it. ${input.customTextPlacement ?? ''}`
+      : '',
+
     'Treat the brief as a single design flowing across the whole image. Place the main focal subject — the character, creature, logo or hero element — over the large panel near the top centre, which is the hood, and make sure that panel is richly painted rather than left as background. The rest of the image continues the same world: scenery, patterns, textures, colour gradients, secondary motifs.',
 
     INTENSITY_COPY[input.intensity],
@@ -66,11 +74,10 @@ export function buildWrapPrompt(input: WrapPromptInput): string {
 
     'ORIENTATION — THE TOP EDGE OF THE IMAGE IS THE FRONT OF THE CAR. The bottom edge is the rear. The large panel near the top centre is the hood, and its upper edge is the leading edge at the car\'s nose. Rotate the focal subject so it faces, points, looks or travels toward the TOP EDGE of the image: a character\'s head and gaze toward the top, a vehicle or animal nose-first toward the top, any motion or speed lines running toward the top. Never orient the subject toward the bottom, left or right edge, and never place it sideways or upside down.',
 
-    input.customText?.trim()
-      ? `LETTERING — the wrap must include this exact text: "${input.customText.trim()}". Reproduce it letter for letter, spelled exactly as written, with no extra words, no invented sponsor names and no duplicated copies scattered around. Set it in a typeface that suits the design, large enough to read easily, in a colour that contrasts with what sits behind it. ${input.customTextPlacement ?? ''}`
-      : '',
+    `Render flat and evenly lit like a printable vinyl wrap texture — no drop shadows, no 3D car mockup, no reflections, no watermark${lettering ? '' : ', no added text unless the brief calls for it'}.`,
 
-    `Render flat and evenly lit like a printable vinyl wrap texture — no drop shadows, no 3D car mockup, no reflections, no watermark${input.customText?.trim() ? '' : ', no added text unless the brief calls for it'}.`,
+    // Restated last as well: a single mention in a long prompt is easy to drop.
+    lettering ? `Before finishing, confirm the words "${lettering}" actually appear as legible text on the wrap.` : '',
   ]
     .filter(Boolean)
     .join(' ')
