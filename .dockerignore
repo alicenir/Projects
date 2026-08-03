@@ -1,0 +1,12 @@
+node_modules
+dist
+dist-ssr
+.git
+.gitignore
+*.local
+*.tsbuildinfo
+.DS_Store
+README.md
+Dockerfile
+.dockerignore
+docker-compose.yml

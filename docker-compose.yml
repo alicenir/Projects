@@ -1,0 +1,12 @@
+services:
+  tesla-wrap-studio:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    image: tesla-wrap-studio:latest
+    container_name: tesla-wrap-studio
+    # Host port is overridable: set WRAP_PORT in a .env file, or in Portainer's
+    # "Environment variables" box on the stack, without editing this file.
+    ports:
+      - "${WRAP_PORT:-8095}:3000"
+    restart: unless-stopped
