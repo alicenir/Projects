@@ -107,6 +107,29 @@ body {
   color: var(--muted);
 }
 
+.field-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+}
+
+.clear-btn {
+  background: transparent;
+  border: 1px solid var(--border);
+  color: var(--muted);
+  padding: 3px 12px;
+  font-size: 0.78rem;
+  font-weight: 500;
+  border-radius: 999px;
+}
+
+.clear-btn:hover:not(:disabled) {
+  background: var(--panel-2);
+  color: var(--text);
+  border-color: var(--accent);
+}
+
 input[type='text'],
 input[type='password'],
 select {
