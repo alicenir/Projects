@@ -9,10 +9,12 @@ interface Props {
   intensity: WrapIntensity
   customText: string
   customTextPlacement: TextPlacementId
+  customTextExact: boolean
   onDescriptionChange: (description: string) => void
   onIntensityChange: (intensity: WrapIntensity) => void
   onCustomTextChange: (text: string) => void
   onCustomTextPlacementChange: (placement: TextPlacementId) => void
+  onCustomTextExactChange: (exact: boolean) => void
 }
 
 export function PromptComposer({
@@ -20,10 +22,12 @@ export function PromptComposer({
   intensity,
   customText,
   customTextPlacement,
+  customTextExact,
   onDescriptionChange,
   onIntensityChange,
   onCustomTextChange,
   onCustomTextPlacementChange,
+  onCustomTextExactChange,
 }: Props) {
   function addTitle(title: string) {
     if (!title) return
@@ -133,10 +137,21 @@ export function PromptComposer({
       </div>
 
       {customText.trim() && (
-        <p className="hint model-note">
-          ⚠ Image models often misspell lettering. Check the result carefully and regenerate if the text comes out
-          wrong — shorter phrases are far more reliable than long ones.
-        </p>
+        <div className="text-mode">
+          <label className="checkbox-row">
+            <input
+              type="checkbox"
+              checked={customTextExact}
+              onChange={(e) => onCustomTextExactChange(e.target.checked)}
+            />
+            <span>Draw the text exactly (recommended)</span>
+          </label>
+          <p className="hint model-note">
+            {customTextExact
+              ? 'Lettering is drawn onto the finished wrap after generation, so the spelling and placement are always right. It reads as cleanly applied vinyl rather than artwork woven into the design.'
+              : '⚠ The image model will draw the lettering as part of the artwork — better integrated, but it frequently misspells or omits text. Check the result carefully.'}
+          </p>
+        </div>
       )}
 
       <label className="field">
