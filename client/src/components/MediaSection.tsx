@@ -3,7 +3,6 @@ import { useCallback, useEffect, useState } from "react";
 import { api } from "../lib/api";
 import { useStore } from "../store/useStore";
 import type { MediaItem, MediaSnapshot } from "../types";
-import { AddMediaModal } from "./AddMediaModal";
 import { SectionHeading } from "./SectionHeading";
 
 function relativeTime(iso: string): string {
@@ -159,8 +158,8 @@ export function MediaSection({ onConfigure }: { onConfigure?: () => void }) {
   const [snapshot, setSnapshot] = useState<MediaSnapshot | null>(null);
   const [selected, setSelected] = useState<MediaItem | null>(null);
   const [unavailable, setUnavailable] = useState(false);
-  const [addOpen, setAddOpen] = useState(false);
-  const authed = useStore((s) => s.authed);
+  const setMediaConfigured = useStore((s) => s.setMediaConfigured);
+  const mediaRefreshToken = useStore((s) => s.mediaRefreshToken);
 
   const refresh = useCallback(async () => {
     try {
@@ -186,6 +185,15 @@ export function MediaSection({ onConfigure }: { onConfigure?: () => void }) {
       clearInterval(id);
     };
   }, []);
+
+  useEffect(() => {
+    setMediaConfigured(Boolean(snapshot?.configured));
+  }, [snapshot?.configured, setMediaConfigured]);
+
+  // Reload after something is added from the header.
+  useEffect(() => {
+    if (mediaRefreshToken > 0) refresh();
+  }, [mediaRefreshToken, refresh]);
 
   useEffect(() => {
     function onKey(e: KeyboardEvent) {
@@ -249,14 +257,7 @@ export function MediaSection({ onConfigure }: { onConfigure?: () => void }) {
             Recently added
           </SectionHeading>
         </div>
-        {authed && (
-          <button
-            onClick={() => setAddOpen(true)}
-            className="btn-outline mb-4 hidden shrink-0 text-sm sm:block"
-          >
-            + Add
-          </button>
-        )}
+
       </div>
 
       {snapshot.errors.length > 0 && (
@@ -273,18 +274,7 @@ export function MediaSection({ onConfigure }: { onConfigure?: () => void }) {
         ))}
       </div>
 
-      {authed && (
-        <button
-          onClick={() => setAddOpen(true)}
-          aria-label="Add a movie or series"
-          className="fixed bottom-5 right-5 z-40 flex h-14 w-14 items-center justify-center rounded-full bg-accent text-2xl font-light text-white shadow-lg shadow-black/40 transition-transform active:scale-95 sm:hidden"
-        >
-          +
-        </button>
-      )}
-
       <DetailModal item={selected} onClose={() => setSelected(null)} />
-      <AddMediaModal open={addOpen} onClose={() => setAddOpen(false)} onAdded={refresh} />
     </section>
   );
 }

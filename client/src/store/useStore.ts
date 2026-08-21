@@ -11,7 +11,15 @@ interface StoreState {
   editMode: boolean;
   sabnzbd: SabnzbdSnapshot | null;
   loading: boolean;
+  /** Whether Sonarr/Radarr are set up, so the header can offer "add media". */
+  mediaConfigured: boolean;
+  addMediaOpen: boolean;
+  /** Bumped after an add so the media row reloads. */
+  mediaRefreshToken: number;
 
+  setMediaConfigured: (value: boolean) => void;
+  setAddMediaOpen: (value: boolean) => void;
+  bumpMediaRefresh: () => void;
   loadAll: () => Promise<void>;
   refreshAuth: () => Promise<void>;
   setSabnzbd: (snapshot: SabnzbdSnapshot) => void;
@@ -32,6 +40,13 @@ export const useStore = create<StoreState>((set, get) => ({
   editMode: false,
   sabnzbd: null,
   loading: true,
+  mediaConfigured: false,
+  addMediaOpen: false,
+  mediaRefreshToken: 0,
+
+  setMediaConfigured: (value) => set({ mediaConfigured: value }),
+  setAddMediaOpen: (value) => set({ addMediaOpen: value }),
+  bumpMediaRefresh: () => set((s) => ({ mediaRefreshToken: s.mediaRefreshToken + 1 })),
 
   loadAll: async () => {
     set({ loading: true });

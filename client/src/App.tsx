@@ -1,4 +1,5 @@
 import { useEffect, useState } from "react";
+import { AddMediaModal } from "./components/AddMediaModal";
 import { AppGrid } from "./components/AppGrid";
 import { BookmarksSection } from "./components/BookmarksSection";
 import { CommandPalette } from "./components/CommandPalette";
@@ -16,6 +17,9 @@ import type { Item, ItemType } from "./types";
 export default function App() {
   const { loadAll, items, settings, loading } = useStore();
   const editMode = useStore((s) => s.editMode);
+  const addMediaOpen = useStore((s) => s.addMediaOpen);
+  const setAddMediaOpen = useStore((s) => s.setAddMediaOpen);
+  const bumpMediaRefresh = useStore((s) => s.bumpMediaRefresh);
 
   const [query, setQuery] = useState("");
   const [paletteOpen, setPaletteOpen] = useState(false);
@@ -79,7 +83,7 @@ export default function App() {
   }
 
   return (
-    <div className="mx-auto flex min-h-screen w-full max-w-[1800px] flex-col gap-10 px-5 pb-24 pt-8 sm:px-8 sm:pb-8 lg:px-12 lg:py-10">
+    <div className="mx-auto flex min-h-screen w-full max-w-[1800px] flex-col gap-10 px-5 py-8 sm:px-8 lg:px-12 lg:py-10">
       <Header
         query={query}
         onQueryChange={setQuery}
@@ -132,6 +136,11 @@ export default function App() {
         </aside>
       </div>
 
+      <AddMediaModal
+        open={addMediaOpen}
+        onClose={() => setAddMediaOpen(false)}
+        onAdded={bumpMediaRefresh}
+      />
       <CommandPalette items={items} open={paletteOpen} onClose={() => setPaletteOpen(false)} />
       <LoginModal open={loginOpen} onClose={() => setLoginOpen(false)} />
       <SettingsPanel open={settingsOpen} onClose={() => setSettingsOpen(false)} initialTab={settingsTab} />

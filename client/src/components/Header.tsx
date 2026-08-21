@@ -15,6 +15,8 @@ export function Header({ query, onQueryChange, onOpenSettings, onOpenLogin }: Pr
   const hasPassword = useStore((s) => s.hasPassword);
   const editMode = useStore((s) => s.editMode);
   const toggleEditMode = useStore((s) => s.toggleEditMode);
+  const mediaConfigured = useStore((s) => s.mediaConfigured);
+  const setAddMediaOpen = useStore((s) => s.setAddMediaOpen);
 
   function handleEditClick() {
     if (!authed && hasPassword) {
@@ -34,6 +36,19 @@ export function Header({ query, onQueryChange, onOpenSettings, onOpenLogin }: Pr
           onChange={onQueryChange}
           searchEngine={settings?.search_engine ?? "https://www.google.com/search?q=%s"}
         />
+        {/* Always in the header so it never depends on how far down the media
+            row is, or whether it has anything in it yet. */}
+        {mediaConfigured && authed && (
+          <button
+            onClick={() => setAddMediaOpen(true)}
+            title="Add a movie or series"
+            className="flex h-[42px] shrink-0 items-center gap-1.5 whitespace-nowrap rounded-xl bg-accent px-3.5 text-sm font-semibold text-white transition-opacity hover:opacity-90"
+          >
+            <span className="text-lg leading-none">+</span>
+            <span className="hidden sm:inline">Add</span>
+          </button>
+        )}
+
         <button
           onClick={handleEditClick}
           className={`hairline shrink-0 whitespace-nowrap rounded-xl border px-3.5 py-2.5 text-sm font-semibold transition-colors ${
