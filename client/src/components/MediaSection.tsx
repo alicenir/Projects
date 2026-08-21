@@ -1,8 +1,9 @@
 import { AnimatePresence, motion } from "framer-motion";
-import { useEffect, useState } from "react";
+import { useCallback, useEffect, useState } from "react";
 import { api } from "../lib/api";
 import { useStore } from "../store/useStore";
 import type { MediaItem, MediaSnapshot } from "../types";
+import { AddMediaModal } from "./AddMediaModal";
 import { SectionHeading } from "./SectionHeading";
 
 function relativeTime(iso: string): string {
@@ -158,22 +159,25 @@ export function MediaSection({ onConfigure }: { onConfigure?: () => void }) {
   const [snapshot, setSnapshot] = useState<MediaSnapshot | null>(null);
   const [selected, setSelected] = useState<MediaItem | null>(null);
   const [unavailable, setUnavailable] = useState(false);
+  const [addOpen, setAddOpen] = useState(false);
+  const authed = useStore((s) => s.authed);
+
+  const refresh = useCallback(async () => {
+    try {
+      const data = await api.get<MediaSnapshot>("/media/recent?limit=12");
+      setSnapshot(data);
+      setUnavailable(false);
+    } catch {
+      // The endpoint doesn't exist (older server build) or the request failed.
+      setSnapshot({ configured: false, items: [], errors: [] });
+      setUnavailable(true);
+    }
+  }, []);
 
   useEffect(() => {
     let cancelled = false;
     async function load() {
-      try {
-        const data = await api.get<MediaSnapshot>("/media/recent?limit=12");
-        if (cancelled) return;
-        setSnapshot(data);
-        setUnavailable(false);
-      } catch {
-        // The endpoint doesn't exist (older server build) or the request failed.
-        if (!cancelled) {
-          setSnapshot({ configured: false, items: [], errors: [] });
-          setUnavailable(true);
-        }
-      }
+      if (!cancelled) await refresh();
     }
     load();
     const id = setInterval(load, 5 * 60 * 1000);
@@ -239,9 +243,18 @@ export function MediaSection({ onConfigure }: { onConfigure?: () => void }) {
 
   return (
     <section>
-      <SectionHeading major count={snapshot.items.length}>
-        Recently added
-      </SectionHeading>
+      <div className="flex items-center gap-3">
+        <div className="min-w-0 flex-1">
+          <SectionHeading major count={snapshot.items.length}>
+            Recently added
+          </SectionHeading>
+        </div>
+        {authed && (
+          <button onClick={() => setAddOpen(true)} className="btn-outline mb-4 shrink-0 text-sm">
+            + Add
+          </button>
+        )}
+      </div>
 
       {snapshot.errors.length > 0 && (
         <p className="mb-3 rounded-xl bg-red-500/10 px-3.5 py-2.5 text-xs text-red-300">
@@ -258,6 +271,7 @@ export function MediaSection({ onConfigure }: { onConfigure?: () => void }) {
       </div>
 
       <DetailModal item={selected} onClose={() => setSelected(null)} />
+      <AddMediaModal open={addOpen} onClose={() => setAddOpen(false)} onAdded={refresh} />
     </section>
   );
 }

@@ -134,3 +134,24 @@ export interface TeslaSnapshot {
   lengthUnit: string;
   tempUnit: string;
 }
+
+export interface LookupResult {
+  service: ArrService;
+  kind: "movie" | "series";
+  externalId: number;
+  title: string;
+  year: number | null;
+  overview: string;
+  poster: string | null;
+  runtime: number | null;
+  genres: string[];
+  rating: number | null;
+  network: string | null;
+  status: string | null;
+  existingId: number;
+}
+
+export interface AddOptions {
+  rootFolders: { id: number; path: string; freeSpace: number | null }[];
+  qualityProfiles: { id: number; name: string }[];
+}

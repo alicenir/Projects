@@ -19,6 +19,9 @@ modern UI, live SABnzbd downloads, and a Sonarr/Radarr "recently added" media ro
   [TeslaMateApi](https://github.com/tobiasehlert/teslamateapi), the REST API that runs alongside
   TeslaMate (TeslaMate itself has no HTTP API). Poll rate adapts to the car's state so a sleeping
   car isn't queried needlessly.
+- **Add movies & series** — search TMDB/TheTVDB *through* Radarr/Sonarr from the dashboard, pick a
+  quality profile and root folder, and queue it with an immediate search. Titles already in your
+  library are flagged and can't be added twice. Requires login when a password is set.
 - **Live SABnzbd widget** — real-time queue with per-item progress bars, speed, ETA, and pause/resume/remove
   controls, pushed to the browser over WebSockets (no page refresh, no polling on the client).
 - **Theming** — dark/light mode and a configurable accent color.
@@ -42,6 +45,12 @@ The Tesla widget reads `/api/v1/cars/:id/status` from TeslaMateApi and pushes sn
 Socket.IO channel as SABnzbd. Polling backs off by state — 10s while driving or charging, 30s when
 online, 60s when asleep or offline — so it never keeps the car awake unnecessarily. The API token
 (only needed when `API_TOKEN_DISABLE=false`) is stored server-side and never sent to the browser.
+
+Adding media uses `movie/lookup` + `POST /movie` (Radarr) and `series/lookup` + `POST /series`
+(Sonarr), with `searchForMovie` / `searchForMissingEpisodes` so a grab starts right away. Root
+folders and quality profiles are read live from each instance rather than hard-coded. These endpoints
+can queue downloads, so they sit behind the same auth gate as editing — the read-only "recently
+added" row stays public.
 
 Sonarr/Radarr metadata comes from your own instances — they already cache overviews and artwork
 from TMDB/TheTVDB when they add media, so no third-party API key is needed. Cover art is proxied

@@ -74,6 +74,27 @@ async function callArr(
   }
 }
 
+async function postArr(service: ArrService, path: string, body: unknown): Promise<any> {
+  const cfg = config(service);
+  if (!cfg) throw new Error("not_configured");
+
+  const controller = new AbortController();
+  const timeout = setTimeout(() => controller.abort(), 20000);
+  try {
+    const res = await fetch(`${cfg.url}${path}`, {
+      method: "POST",
+      headers: { "X-Api-Key": cfg.apiKey, "Content-Type": "application/json" },
+      body: JSON.stringify(body),
+      signal: controller.signal,
+    });
+    if (res.status === 401) throw new Error("Invalid API key");
+    if (!res.ok) throw new Error(`HTTP ${res.status}${await describeError(res)}`);
+    return await res.json();
+  } finally {
+    clearTimeout(timeout);
+  }
+}
+
 /** Pulls the validation message out of an *arr error body, if there is one. */
 async function describeError(res: Response): Promise<string> {
   try {
@@ -319,4 +340,126 @@ export async function testArrConnection(service: ArrService, url: string, apiKey
   } finally {
     clearTimeout(timeout);
   }
+}
+
+// ---------------------------------------------------------------------------
+// Adding new media
+// ---------------------------------------------------------------------------
+
+export interface LookupResult {
+  service: ArrService;
+  kind: "movie" | "series";
+  /** tmdbId for movies, tvdbId for series. */
+  externalId: number;
+  title: string;
+  year: number | null;
+  overview: string;
+  poster: string | null;
+  runtime: number | null;
+  genres: string[];
+  rating: number | null;
+  network: string | null;
+  status: string | null;
+  /** > 0 when Radarr/Sonarr already track this, so we can stop a duplicate add. */
+  existingId: number;
+}
+
+export interface AddOptions {
+  rootFolders: { id: number; path: string; freeSpace: number | null }[];
+  qualityProfiles: { id: number; name: string }[];
+}
+
+function lookupPoster(images: any[] | undefined): string | null {
+  if (!Array.isArray(images)) return null;
+  const poster = images.find((i) => i?.coverType === "poster") ?? images[0];
+  // Lookup hits aren't in the library yet, so there's no local MediaCover path
+  // to proxy — the browser loads these straight from TMDB/TheTVDB.
+  return poster?.remoteUrl ?? poster?.url ?? null;
+}
+
+export async function lookup(service: ArrService, term: string): Promise<LookupResult[]> {
+  const path = service === "radarr" ? "/api/v3/movie/lookup" : "/api/v3/series/lookup";
+  const results = await callArr(service, path, { term });
+  if (!Array.isArray(results)) return [];
+
+  return results.slice(0, 20).map((r: any) => ({
+    service,
+    kind: service === "radarr" ? ("movie" as const) : ("series" as const),
+    externalId: service === "radarr" ? (r.tmdbId ?? 0) : (r.tvdbId ?? 0),
+    title: r.title ?? "Unknown",
+    year: r.year ?? null,
+    overview: r.overview ?? "",
+    poster: lookupPoster(r.images),
+    runtime: r.runtime ?? null,
+    genres: r.genres ?? [],
+    rating: r.ratings?.tmdb?.value ?? r.ratings?.value ?? null,
+    network: r.network ?? null,
+    status: r.status ?? null,
+    existingId: r.id ?? 0,
+  }));
+}
+
+export async function getAddOptions(service: ArrService): Promise<AddOptions> {
+  const [rootFolders, qualityProfiles] = await Promise.all([
+    callArr(service, "/api/v3/rootfolder"),
+    callArr(service, "/api/v3/qualityprofile"),
+  ]);
+  return {
+    rootFolders: (Array.isArray(rootFolders) ? rootFolders : []).map((f: any) => ({
+      id: f.id,
+      path: f.path,
+      freeSpace: typeof f.freeSpace === "number" ? f.freeSpace : null,
+    })),
+    qualityProfiles: (Array.isArray(qualityProfiles) ? qualityProfiles : []).map((p: any) => ({
+      id: p.id,
+      name: p.name,
+    })),
+  };
+}
+
+export interface AddRequest {
+  service: ArrService;
+  externalId: number;
+  title: string;
+  year?: number | null;
+  qualityProfileId: number;
+  rootFolderPath: string;
+  searchNow: boolean;
+  /** Sonarr only: which episodes to monitor. */
+  monitor?: "all" | "future" | "firstSeason" | "none";
+}
+
+export async function addMedia(req: AddRequest) {
+  if (req.service === "radarr") {
+    const body = {
+      title: req.title,
+      tmdbId: req.externalId,
+      year: req.year ?? undefined,
+      qualityProfileId: req.qualityProfileId,
+      rootFolderPath: req.rootFolderPath,
+      monitored: true,
+      minimumAvailability: "released",
+      addOptions: { searchForMovie: req.searchNow },
+    };
+    const created = await postArr("radarr", "/api/v3/movie", body);
+    invalidateMediaCache();
+    return { id: created?.id ?? null, title: created?.title ?? req.title };
+  }
+
+  const body = {
+    title: req.title,
+    tvdbId: req.externalId,
+    qualityProfileId: req.qualityProfileId,
+    rootFolderPath: req.rootFolderPath,
+    monitored: true,
+    seasonFolder: true,
+    addOptions: {
+      monitor: req.monitor ?? "all",
+      searchForMissingEpisodes: req.searchNow,
+      searchForCutoffUnmetEpisodes: false,
+    },
+  };
+  const created = await postArr("sonarr", "/api/v3/series", body);
+  invalidateMediaCache();
+  return { id: created?.id ?? null, title: created?.title ?? req.title };
 }
