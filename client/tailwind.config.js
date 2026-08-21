@@ -10,7 +10,7 @@ export default {
           DEFAULT: "rgb(var(--surface) / <alpha-value>)",
           raised: "rgb(var(--surface-raised) / <alpha-value>)",
         },
-        base: "rgb(var(--base) / <alpha-value>)",
+        canvas: "rgb(var(--base) / <alpha-value>)",
       },
       fontFamily: {
         sans: ["Inter", "system-ui", "sans-serif"],

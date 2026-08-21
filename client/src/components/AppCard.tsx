@@ -37,10 +37,10 @@ export function AppCard({ item, editMode, onEdit, onDelete }: Props) {
         target="_blank"
         rel="noreferrer"
         onClick={(e) => editMode && e.preventDefault()}
-        className="glass flex flex-col items-center gap-2 rounded-2xl p-4 transition-colors hover:border-accent/50 hover:shadow-glow cursor-pointer"
+        className="glass flex flex-col items-center gap-2.5 rounded-2xl p-4 transition-colors hover:border-accent/50 hover:shadow-glow cursor-pointer"
       >
-        <div className="flex h-12 w-12 items-center justify-center rounded-xl bg-white/5 overflow-hidden">
-          <Icon icon={item.icon} name={item.name} className="h-8 w-8" />
+        <div className="flex h-16 w-16 items-center justify-center rounded-xl bg-white/5 overflow-hidden">
+          <Icon icon={item.icon} name={item.name} className="h-11 w-11" />
         </div>
         <span className="max-w-[6.5rem] truncate text-sm font-medium">{item.name}</span>
       </a>

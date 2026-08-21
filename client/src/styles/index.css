@@ -26,7 +26,7 @@ body,
 }
 
 body {
-  @apply bg-base text-slate-100 antialiased;
+  @apply bg-canvas text-slate-100 antialiased;
   font-family: "Inter", system-ui, sans-serif;
   background-image:
     radial-gradient(circle at 15% 0%, color-mix(in srgb, var(--accent) 18%, transparent), transparent 45%),
