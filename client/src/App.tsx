@@ -9,6 +9,7 @@ import { MediaSection } from "./components/MediaSection";
 import { SabnzbdWidget } from "./components/SabnzbdWidget";
 import { SectionHeading } from "./components/SectionHeading";
 import { SettingsPanel } from "./components/SettingsPanel";
+import { TeslaWidget } from "./components/TeslaWidget";
 import { useStore } from "./store/useStore";
 import type { Item, ItemType } from "./types";
 
@@ -20,7 +21,7 @@ export default function App() {
   const [paletteOpen, setPaletteOpen] = useState(false);
   const [loginOpen, setLoginOpen] = useState(false);
   const [settingsOpen, setSettingsOpen] = useState(false);
-  const [settingsTab, setSettingsTab] = useState<"General" | "Media">("General");
+  const [settingsTab, setSettingsTab] = useState<"General" | "Media" | "Car">("General");
   const [itemModalOpen, setItemModalOpen] = useState(false);
   const [editingItem, setEditingItem] = useState<Item | null>(null);
   const [newItemDefaults, setNewItemDefaults] = useState<{ type: ItemType; categoryId: number | null }>({
@@ -127,6 +128,7 @@ export default function App() {
 
         <aside className="flex min-w-0 flex-col gap-6">
           <SabnzbdWidget />
+          <TeslaWidget />
         </aside>
       </div>
 

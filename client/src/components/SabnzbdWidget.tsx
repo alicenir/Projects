@@ -124,10 +124,23 @@ export function SabnzbdWidget() {
   const authed = useStore((s) => s.authed);
 
   useEffect(() => {
+    let gotPush = false;
+
     function onUpdate(snapshot: any) {
+      gotPush = true;
       setSabnzbd(snapshot);
     }
     socket.on("sabnzbd:update", onUpdate);
+
+    // Seed over REST in case the server's connect-time emit lands before this
+    // listener is attached (see TeslaWidget for the same race).
+    api
+      .get("/sabnzbd/status")
+      .then((initial) => {
+        if (!gotPush) setSabnzbd(initial as any);
+      })
+      .catch(() => {});
+
     return () => {
       socket.off("sabnzbd:update", onUpdate);
     };

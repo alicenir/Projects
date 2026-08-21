@@ -5,7 +5,7 @@ import { api } from "../lib/api";
 import { useStore } from "../store/useStore";
 
 const ACCENTS = ["#7c5cff", "#22c55e", "#f97316", "#ef4444", "#06b6d4", "#ec4899"];
-const TABS = ["General", "Appearance", "Downloads", "Media", "Categories", "Security"] as const;
+const TABS = ["General", "Appearance", "Downloads", "Media", "Car", "Categories", "Security"] as const;
 
 type TabName = (typeof TABS)[number];
 
@@ -40,6 +40,9 @@ export function SettingsPanel({
     radarr_api_key: "",
   });
   const [testingArr, setTestingArr] = useState<"sonarr" | "radarr" | null>(null);
+  const [tesla, setTesla] = useState({ url: "", token: "", carId: "1" });
+  const [testingTesla, setTestingTesla] = useState(false);
+  const [teslaCars, setTeslaCars] = useState<{ id: number; name: string }[]>([]);
   const [currentPassword, setCurrentPassword] = useState("");
   const [newPassword, setNewPassword] = useState("");
 
@@ -54,6 +57,11 @@ export function SettingsPanel({
     setTheme((settings.theme as "dark" | "light") ?? "dark");
     setAccent(settings.accent_color ?? "#7c5cff");
     setSabUrl(settings.sabnzbd_url ?? "");
+    setTesla({
+      url: settings.teslamate_url ?? "",
+      token: "",
+      carId: settings.teslamate_car_id ?? "1",
+    });
     setArr({
       sonarr_url: settings.sonarr_url ?? "",
       sonarr_api_key: "",
@@ -132,6 +140,48 @@ export function SettingsPanel({
     });
     setArr((a) => ({ ...a, [`${service}_api_key`]: "" }));
     toast.success(`${service === "sonarr" ? "Sonarr" : "Radarr"} saved`);
+  }
+
+  async function testTesla() {
+    if (!tesla.url) return toast.error("Enter the TeslaMateApi URL");
+    setTestingTesla(true);
+    try {
+      const result = await api.post<{
+        ok: boolean;
+        error?: string;
+        warning?: string;
+        cars?: { id: number; name: string }[];
+      }>("/settings/teslamate/test", { url: tesla.url, token: tesla.token });
+      if (!result.ok) {
+        toast.error(result.error ?? "Connection failed");
+      } else if (result.warning) {
+        toast(result.warning);
+      } else {
+        setTeslaCars(result.cars ?? []);
+        toast.success(`Found ${result.cars?.length ?? 0} car(s)`);
+      }
+    } catch (err) {
+      toast.error(err instanceof Error ? err.message : "Connection failed");
+    } finally {
+      setTestingTesla(false);
+    }
+  }
+
+  async function saveTesla() {
+    const payload: Record<string, string> = {
+      teslamate_url: tesla.url,
+      teslamate_car_id: tesla.carId || "1",
+    };
+    if (tesla.token) payload.teslamate_api_token = tesla.token;
+    await api.put("/settings", payload);
+    setSettings({
+      ...settings!,
+      teslamate_url: tesla.url,
+      teslamate_car_id: tesla.carId || "1",
+      teslamate_configured: String(Boolean(tesla.url)),
+    });
+    setTesla((s) => ({ ...s, token: "" }));
+    toast.success("TeslaMate saved");
   }
 
   async function addCategory() {
@@ -368,6 +418,82 @@ export function SettingsPanel({
                       </div>
                     </div>
                   ))}
+                </div>
+              )}
+
+              {tab === "Car" && (
+                <div className="flex flex-col gap-4">
+                  <div>
+                    <h2 className="text-lg font-semibold">TeslaMate</h2>
+                    <p className="mt-1 text-sm text-ink-muted">
+                      Point this at your{" "}
+                      <span className="font-medium text-ink">TeslaMateApi</span> instance (the REST
+                      API that runs alongside TeslaMate, usually on port 8080) to show battery,
+                      range and charging state on the dashboard.
+                    </p>
+                  </div>
+
+                  <label className="text-sm text-ink-muted">
+                    TeslaMateApi URL
+                    <input
+                      value={tesla.url}
+                      onChange={(e) => setTesla((s) => ({ ...s, url: e.target.value }))}
+                      placeholder="http://192.168.1.10:8080"
+                      className="field mt-1"
+                    />
+                  </label>
+
+                  <label className="text-sm text-ink-muted">
+                    API token (only if API_TOKEN_DISABLE is false)
+                    <input
+                      type="password"
+                      value={tesla.token}
+                      onChange={(e) => setTesla((s) => ({ ...s, token: e.target.value }))}
+                      placeholder={
+                        settings.teslamate_configured === "true"
+                          ? "•••••••• (unchanged)"
+                          : "Leave blank if your API needs no token"
+                      }
+                      className="field mt-1"
+                    />
+                  </label>
+
+                  <label className="text-sm text-ink-muted">
+                    Car
+                    {teslaCars.length > 0 ? (
+                      <select
+                        value={tesla.carId}
+                        onChange={(e) => setTesla((s) => ({ ...s, carId: e.target.value }))}
+                        className="field mt-1"
+                      >
+                        {teslaCars.map((c) => (
+                          <option key={c.id} value={String(c.id)}>
+                            {c.name} (id {c.id})
+                          </option>
+                        ))}
+                      </select>
+                    ) : (
+                      <input
+                        value={tesla.carId}
+                        onChange={(e) => setTesla((s) => ({ ...s, carId: e.target.value }))}
+                        placeholder="1"
+                        className="field mt-1"
+                      />
+                    )}
+                  </label>
+
+                  <div className="ml-auto flex gap-2">
+                    <button
+                      onClick={testTesla}
+                      disabled={testingTesla}
+                      className="btn-outline disabled:opacity-50"
+                    >
+                      {testingTesla ? "Testing…" : "Test & list cars"}
+                    </button>
+                    <button onClick={saveTesla} className="btn-primary">
+                      Save
+                    </button>
+                  </div>
                 </div>
               )}
 

@@ -14,6 +14,11 @@ modern UI, live SABnzbd downloads, and a Sonarr/Radarr "recently added" media ro
   imported by Radarr/Sonarr, so you can see what landed without opening either app. Click a poster
   for the full synopsis; for TV that's the *episode's* own title and overview (e.g. "Severance ·
   S02E05 — Trojan's Horse"), not just the series blurb.
+- **Tesla widget** — battery level with charge-limit marker, range, charging power and time-to-full,
+  odometer, cabin temperature, plus lock/sentry/window warnings. Fed from
+  [TeslaMateApi](https://github.com/tobiasehlert/teslamateapi), the REST API that runs alongside
+  TeslaMate (TeslaMate itself has no HTTP API). Poll rate adapts to the car's state so a sleeping
+  car isn't queried needlessly.
 - **Live SABnzbd widget** — real-time queue with per-item progress bars, speed, ETA, and pause/resume/remove
   controls, pushed to the browser over WebSockets (no page refresh, no polling on the client).
 - **Theming** — dark/light mode and a configurable accent color.
@@ -32,6 +37,11 @@ server/   Express + TypeScript + SQLite (better-sqlite3) + Socket.IO
 The server exposes a REST API under `/api`, a WebSocket channel for live SABnzbd queue updates, and (in
 production) serves the built client as static files — so the whole app runs as a single container on a
 single port.
+
+The Tesla widget reads `/api/v1/cars/:id/status` from TeslaMateApi and pushes snapshots over the same
+Socket.IO channel as SABnzbd. Polling backs off by state — 10s while driving or charging, 30s when
+online, 60s when asleep or offline — so it never keeps the car awake unnecessarily. The API token
+(only needed when `API_TOKEN_DISABLE=false`) is stored server-side and never sent to the browser.
 
 Sonarr/Radarr metadata comes from your own instances — they already cache overviews and artwork
 from TMDB/TheTVDB when they add media, so no third-party API key is needed. Cover art is proxied
@@ -83,7 +93,9 @@ volume.
    in SABnzbd under **Config → General**).
 6. Optionally connect Sonarr and Radarr under **Settings → Media** (API key is in each app under
    *Settings → General*) to get the "Recently added" poster row.
-7. Optionally set a password under **Settings → Security** to lock editing.
+7. Optionally connect TeslaMateApi under **Settings → Car** — enter its URL (usually port 8080), hit
+   **Test & list cars** to discover your vehicles, pick one, and save.
+8. Optionally set a password under **Settings → Security** to lock editing.
 
 ## Configuration reference
 
@@ -94,7 +106,7 @@ volume.
 | `JWT_SECRET`  | *(insecure default)* | Secret used to sign edit-mode login tokens — set this! |
 | `CORS_ORIGIN` | *(same-origin)*      | Only needed if you split client/server across origins |
 
-All other configuration (SABnzbd/Sonarr/Radarr connections, theme, greeting, search engine, password) lives in the
+All other configuration (SABnzbd/Sonarr/Radarr/TeslaMate connections, theme, greeting, search engine, password) lives in the
 database and is managed from the in-app **Settings** panel — nothing else needs to be set via environment
 variables or config files.
 

@@ -12,7 +12,9 @@ import { itemsRouter } from "./routes/items.js";
 import { settingsRouter } from "./routes/settings.js";
 import { sabnzbdRouter } from "./routes/sabnzbd.js";
 import { mediaRouter } from "./routes/media.js";
+import { teslamateRouter } from "./routes/teslamate.js";
 import { getSnapshot, startSabnzbdPolling } from "./services/sabnzbd.js";
+import { getSnapshot as getTeslaSnapshot, startTeslaPolling } from "./services/teslamate.js";
 
 const __dirname = path.dirname(fileURLToPath(import.meta.url));
 const PORT = Number(process.env.PORT ?? 5000);
@@ -29,6 +31,7 @@ app.use("/api", itemsRouter);
 app.use("/api/settings", settingsRouter);
 app.use("/api/sabnzbd", sabnzbdRouter);
 app.use("/api/media", mediaRouter);
+app.use("/api/teslamate", teslamateRouter);
 
 if (fs.existsSync(CLIENT_DIST)) {
   app.use(express.static(CLIENT_DIST));
@@ -45,9 +48,11 @@ const io = new Server(httpServer, {
 
 io.on("connection", async (socket) => {
   socket.emit("sabnzbd:update", await getSnapshot());
+  socket.emit("teslamate:update", await getTeslaSnapshot());
 });
 
 startSabnzbdPolling(io);
+startTeslaPolling(io);
 
 httpServer.listen(PORT, () => {
   console.log(`Homebase server listening on port ${PORT}`);

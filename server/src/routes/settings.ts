@@ -4,11 +4,12 @@ import { getAllSettings, setSetting } from "../db.js";
 import { isRequestAuthed, requireAuth } from "../middleware/auth.js";
 import { testConnection } from "../services/sabnzbd.js";
 import { invalidateMediaCache, testArrConnection } from "../services/arr.js";
+import { testConnection as testTeslaConnection } from "../services/teslamate.js";
 
 export const settingsRouter = Router();
 
-const SECRET_KEYS = ["password_hash", "sabnzbd_api_key", "sonarr_api_key", "radarr_api_key"];
-const URL_KEYS = ["sabnzbd_url", "sonarr_url", "radarr_url"];
+const SECRET_KEYS = ["password_hash", "sabnzbd_api_key", "sonarr_api_key", "radarr_api_key", "teslamate_api_token"];
+const URL_KEYS = ["sabnzbd_url", "sonarr_url", "radarr_url", "teslamate_url"];
 
 settingsRouter.get("/", (req, res) => {
   const all = getAllSettings();
@@ -22,6 +23,8 @@ settingsRouter.get("/", (req, res) => {
       Boolean(all[`${service}_url`] && all[`${service}_api_key`])
     );
   }
+  // TeslaMateApi's token is optional (API_TOKEN_DISABLE=true), so a URL alone counts.
+  visible.teslamate_configured = String(Boolean(all.teslamate_url));
   if (!authed) {
     for (const key of URL_KEYS) delete visible[key];
   }
@@ -48,6 +51,15 @@ settingsRouter.post("/sabnzbd/test", requireAuth, async (req, res) => {
   const parsed = testSchema.safeParse(req.body);
   if (!parsed.success) return res.status(400).json({ error: "URL and API key required" });
   const result = await testConnection(parsed.data.url, parsed.data.apiKey);
+  res.json(result);
+});
+
+const teslaTestSchema = z.object({ url: z.string().min(1), token: z.string().optional() });
+
+settingsRouter.post("/teslamate/test", requireAuth, async (req, res) => {
+  const parsed = teslaTestSchema.safeParse(req.body);
+  if (!parsed.success) return res.status(400).json({ error: "URL required" });
+  const result = await testTeslaConnection(parsed.data.url, parsed.data.token ?? "");
   res.json(result);
 });
 

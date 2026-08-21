@@ -92,3 +92,41 @@ export interface MediaSnapshot {
   items: MediaItem[];
   errors: { service: ArrService; message: string }[];
 }
+
+export interface TeslaSnapshot {
+  configured: boolean;
+  reachable: boolean;
+  error?: string;
+  name: string;
+  state: string;
+  stateSince: string | null;
+  healthy: boolean;
+  batteryLevel: number | null;
+  usableBatteryLevel: number | null;
+  chargeLimit: number | null;
+  estRange: number | null;
+  ratedRange: number | null;
+  pluggedIn: boolean;
+  charging: boolean;
+  chargerPower: number | null;
+  chargeEnergyAdded: number | null;
+  timeToFullCharge: number | null;
+  scheduledChargingStart: string | null;
+  odometer: number | null;
+  speed: number | null;
+  shiftState: string | null;
+  insideTemp: number | null;
+  outsideTemp: number | null;
+  climateOn: boolean;
+  geofence: string | null;
+  latitude: number | null;
+  longitude: number | null;
+  locked: boolean;
+  sentryMode: boolean;
+  windowsOpen: boolean;
+  doorsOpen: boolean;
+  updateAvailable: boolean;
+  version: string | null;
+  lengthUnit: string;
+  tempUnit: string;
+}
