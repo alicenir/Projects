@@ -26,6 +26,17 @@ export function Header({ query, onQueryChange, onOpenSettings, onOpenLogin }: Pr
     toggleEditMode();
   }
 
+  // Shown whether or not this browser has a session — a phone is a separate
+  // browser from the desktop, so hiding it there just made the feature look
+  // missing. Tapping it prompts for the password instead, like Edit does.
+  function handleAddClick() {
+    if (!authed && hasPassword) {
+      onOpenLogin();
+      return;
+    }
+    setAddMediaOpen(true);
+  }
+
   return (
     <header className="flex flex-col gap-6 lg:flex-row lg:items-end lg:justify-between">
       <Greeting name={settings?.greeting_name ?? ""} />
@@ -38,9 +49,9 @@ export function Header({ query, onQueryChange, onOpenSettings, onOpenLogin }: Pr
         />
         {/* Always in the header so it never depends on how far down the media
             row is, or whether it has anything in it yet. */}
-        {mediaConfigured && authed && (
+        {mediaConfigured && (
           <button
-            onClick={() => setAddMediaOpen(true)}
+            onClick={handleAddClick}
             title="Add a movie or series"
             className="flex h-[42px] shrink-0 items-center gap-1.5 whitespace-nowrap rounded-xl bg-accent px-3.5 text-sm font-semibold text-white transition-opacity hover:opacity-90"
           >

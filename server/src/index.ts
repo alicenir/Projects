@@ -34,9 +34,23 @@ app.use("/api/media", mediaRouter);
 app.use("/api/teslamate", teslamateRouter);
 
 if (fs.existsSync(CLIENT_DIST)) {
-  app.use(express.static(CLIENT_DIST));
+  app.use(
+    express.static(CLIENT_DIST, {
+      setHeaders(res, filePath) {
+        // Vite fingerprints everything under /assets, so those can be cached
+        // forever. index.html must not be, or a browser keeps loading the old
+        // bundle after a redeploy — which looks exactly like a missing feature.
+        if (filePath.endsWith("index.html")) {
+          res.setHeader("Cache-Control", "no-cache, no-store, must-revalidate");
+        } else if (filePath.includes(`${path.sep}assets${path.sep}`)) {
+          res.setHeader("Cache-Control", "public, max-age=31536000, immutable");
+        }
+      },
+    })
+  );
   app.get("*", (req, res, next) => {
     if (req.path.startsWith("/api")) return next();
+    res.setHeader("Cache-Control", "no-cache, no-store, must-revalidate");
     res.sendFile(path.join(CLIENT_DIST, "index.html"));
   });
 }
