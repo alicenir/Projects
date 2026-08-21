@@ -32,8 +32,16 @@ export interface MediaSnapshot {
   errors: { service: ArrService; message: string }[];
 }
 
-/** Radarr/Sonarr history eventType for "downloaded and imported". */
-const EVENT_DOWNLOAD_IMPORTED = "downloadFolderImported";
+/**
+ * Radarr/Sonarr history eventType for "downloaded and imported".
+ *
+ * The API binds this parameter as an integer enum — passing the string name
+ * ("downloadFolderImported") is rejected with HTTP 400. Responses, confusingly,
+ * serialise the same field *as* that string, which is what we match on when we
+ * have to filter client-side.
+ */
+const EVENT_DOWNLOAD_IMPORTED_ID = "3";
+const EVENT_DOWNLOAD_IMPORTED_NAME = "downloadFolderImported";
 
 function config(service: ArrService): { url: string; apiKey: string } | null {
   const url = getSetting(`${service}_url`);
@@ -59,11 +67,69 @@ async function callArr(
       signal: controller.signal,
     });
     if (res.status === 401) throw new Error("Invalid API key");
-    if (!res.ok) throw new Error(`HTTP ${res.status}`);
+    if (!res.ok) throw new Error(`HTTP ${res.status}${await describeError(res)}`);
     return await res.json();
   } finally {
     clearTimeout(timeout);
   }
+}
+
+/** Pulls the validation message out of an *arr error body, if there is one. */
+async function describeError(res: Response): Promise<string> {
+  try {
+    const text = (await res.text()).slice(0, 300);
+    if (!text) return "";
+    try {
+      const parsed = JSON.parse(text);
+      const first = Array.isArray(parsed) ? parsed[0] : parsed;
+      const detail = first?.errorMessage ?? first?.message;
+      if (detail) return ` — ${first.propertyName ? `${first.propertyName}: ` : ""}${detail}`;
+    } catch {
+      /* not JSON, fall through to the raw text */
+    }
+    return ` — ${text}`;
+  } catch {
+    return "";
+  }
+}
+
+/**
+ * Requests history filtered to imports. Older/newer *arr builds disagree about
+ * the eventType parameter, so if the filtered call is rejected we retry
+ * unfiltered and narrow the records ourselves.
+ */
+async function fetchImportHistory(
+  service: ArrService,
+  limit: number,
+  extra: Record<string, string>
+): Promise<any[]> {
+  const base = {
+    page: "1",
+    pageSize: String(limit),
+    sortKey: "date",
+    sortDirection: "descending",
+    ...extra,
+  };
+
+  let data: any;
+  try {
+    data = await callArr(service, "/api/v3/history", {
+      ...base,
+      eventType: EVENT_DOWNLOAD_IMPORTED_ID,
+    });
+  } catch (err) {
+    if (!(err instanceof Error) || !err.message.startsWith("HTTP 400")) throw err;
+    // Ask for more rows since we're about to discard the non-import events.
+    data = await callArr(service, "/api/v3/history", {
+      ...base,
+      pageSize: String(limit * 5),
+    });
+  }
+
+  const records: any[] = data?.records ?? [];
+  return records.filter(
+    (r) => !r?.eventType || r.eventType === EVENT_DOWNLOAD_IMPORTED_NAME
+  );
 }
 
 function posterPath(service: ArrService, images: any[] | undefined): string | null {
@@ -83,20 +149,13 @@ function pad(n: number): string {
 }
 
 async function fetchRadarr(limit: number): Promise<MediaItem[]> {
-  const data = await callArr("radarr", "/api/v3/history", {
-    page: "1",
-    pageSize: String(limit),
-    sortKey: "date",
-    sortDirection: "descending",
-    eventType: EVENT_DOWNLOAD_IMPORTED,
-    includeMovie: "true",
-  });
+  const records = await fetchImportHistory("radarr", limit, { includeMovie: "true" });
 
   const cfg = config("radarr");
   const seen = new Set<number>();
   const items: MediaItem[] = [];
 
-  for (const record of data?.records ?? []) {
+  for (const record of records) {
     const movie = record.movie;
     if (!movie || seen.has(movie.id)) continue;
     seen.add(movie.id);
@@ -124,12 +183,7 @@ async function fetchRadarr(limit: number): Promise<MediaItem[]> {
 }
 
 async function fetchSonarr(limit: number): Promise<MediaItem[]> {
-  const data = await callArr("sonarr", "/api/v3/history", {
-    page: "1",
-    pageSize: String(limit),
-    sortKey: "date",
-    sortDirection: "descending",
-    eventType: EVENT_DOWNLOAD_IMPORTED,
+  const records = await fetchImportHistory("sonarr", limit, {
     includeSeries: "true",
     includeEpisode: "true",
   });
@@ -138,7 +192,7 @@ async function fetchSonarr(limit: number): Promise<MediaItem[]> {
   const seen = new Set<string>();
   const items: MediaItem[] = [];
 
-  for (const record of data?.records ?? []) {
+  for (const record of records) {
     const series = record.series;
     const episode = record.episode;
     if (!series || !episode) continue;
