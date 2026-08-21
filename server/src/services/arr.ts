@@ -463,3 +463,70 @@ export async function addMedia(req: AddRequest) {
   invalidateMediaCache();
   return { id: created?.id ?? null, title: created?.title ?? req.title };
 }
+
+// ---------------------------------------------------------------------------
+// Upcoming episodes (Sonarr calendar)
+// ---------------------------------------------------------------------------
+
+export interface UpcomingItem {
+  id: string;
+  title: string;
+  subtitle: string;
+  overview: string;
+  airsAt: string;
+  poster: string | null;
+  network: string | null;
+  /** Already downloaded, so it can be dimmed rather than treated as pending. */
+  hasFile: boolean;
+  link: string | null;
+}
+
+export interface UpcomingSnapshot {
+  configured: boolean;
+  items: UpcomingItem[];
+  error?: string;
+}
+
+export async function getUpcoming(days = 7, limit = 12): Promise<UpcomingSnapshot> {
+  const cfg = config("sonarr");
+  if (!cfg) return { configured: false, items: [] };
+
+  const start = new Date();
+  const end = new Date(start.getTime() + days * 24 * 60 * 60 * 1000);
+
+  try {
+    const records = await callArr("sonarr", "/api/v3/calendar", {
+      start: start.toISOString(),
+      end: end.toISOString(),
+      includeSeries: "true",
+    });
+
+    const items: UpcomingItem[] = (Array.isArray(records) ? records : [])
+      .map((r: any) => {
+        const series = r.series ?? {};
+        const code = `S${pad(r.seasonNumber ?? 0)}E${pad(r.episodeNumber ?? 0)}`;
+        return {
+          id: `sonarr-cal-${r.id}`,
+          title: series.title ?? "Unknown",
+          subtitle: r.title ? `${code} · ${r.title}` : code,
+          overview: r.overview || series.overview || "",
+          airsAt: r.airDateUtc ?? r.airDate ?? "",
+          poster: posterPath("sonarr", series.images),
+          network: series.network ?? null,
+          hasFile: Boolean(r.hasFile),
+          link: series.titleSlug ? `${cfg.url}/series/${series.titleSlug}` : null,
+        };
+      })
+      .filter((i) => i.airsAt)
+      .sort((a, b) => new Date(a.airsAt).getTime() - new Date(b.airsAt).getTime())
+      .slice(0, limit);
+
+    return { configured: true, items };
+  } catch (err) {
+    return {
+      configured: true,
+      items: [],
+      error: err instanceof Error ? err.message : "unreachable",
+    };
+  }
+}

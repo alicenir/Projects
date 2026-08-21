@@ -155,3 +155,92 @@ export interface AddOptions {
   rootFolders: { id: number; path: string; freeSpace: number | null }[];
   qualityProfiles: { id: number; name: string }[];
 }
+
+export interface WeatherDay {
+  date: string;
+  code: number;
+  description: string;
+  max: number | null;
+  min: number | null;
+  precipitationChance: number | null;
+}
+
+export interface WeatherSnapshot {
+  configured: boolean;
+  reachable: boolean;
+  error?: string;
+  label: string;
+  temperature: number | null;
+  feelsLike: number | null;
+  humidity: number | null;
+  windSpeed: number | null;
+  code: number;
+  description: string;
+  isDay: boolean;
+  sunrise: string | null;
+  sunset: string | null;
+  days: WeatherDay[];
+  tempUnit: string;
+  windUnit: string;
+}
+
+export interface GeocodeResult {
+  name: string;
+  country: string;
+  admin1: string | null;
+  latitude: number;
+  longitude: number;
+}
+
+export interface PlexStream {
+  key: string;
+  user: string;
+  title: string;
+  subtitle: string;
+  kind: string;
+  progress: number;
+  state: string;
+  transcoding: boolean;
+  quality: string;
+  player: string;
+  thumb: string | null;
+  durationMs: number | null;
+  viewOffsetMs: number | null;
+}
+
+export interface TautulliSnapshot {
+  configured: boolean;
+  reachable: boolean;
+  error?: string;
+  streamCount: number;
+  totalBandwidth: number | null;
+  streams: PlexStream[];
+}
+
+export type HealthState = "up" | "down" | "unknown";
+
+export interface HealthEntry {
+  state: HealthState;
+  status: number | null;
+  latencyMs: number | null;
+  checkedAt: string;
+  since: string | null;
+}
+
+export interface UpcomingItem {
+  id: string;
+  title: string;
+  subtitle: string;
+  overview: string;
+  airsAt: string;
+  poster: string | null;
+  network: string | null;
+  hasFile: boolean;
+  link: string | null;
+}
+
+export interface UpcomingSnapshot {
+  configured: boolean;
+  items: UpcomingItem[];
+  error?: string;
+}

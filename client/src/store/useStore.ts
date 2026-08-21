@@ -1,6 +1,6 @@
 import { create } from "zustand";
 import { api } from "../lib/api";
-import type { Category, Item, SabnzbdSnapshot, Settings } from "../types";
+import type { Category, HealthEntry, Item, SabnzbdSnapshot, Settings } from "../types";
 
 interface StoreState {
   items: Item[];
@@ -16,7 +16,9 @@ interface StoreState {
   addMediaOpen: boolean;
   /** Bumped after an add so the media row reloads. */
   mediaRefreshToken: number;
+  health: Record<number, HealthEntry>;
 
+  setHealth: (health: Record<number, HealthEntry>) => void;
   setMediaConfigured: (value: boolean) => void;
   setAddMediaOpen: (value: boolean) => void;
   bumpMediaRefresh: () => void;
@@ -43,7 +45,9 @@ export const useStore = create<StoreState>((set, get) => ({
   mediaConfigured: false,
   addMediaOpen: false,
   mediaRefreshToken: 0,
+  health: {},
 
+  setHealth: (health) => set({ health }),
   setMediaConfigured: (value) => set({ mediaConfigured: value }),
   setAddMediaOpen: (value) => set({ addMediaOpen: value }),
   bumpMediaRefresh: () => set((s) => ({ mediaRefreshToken: s.mediaRefreshToken + 1 })),

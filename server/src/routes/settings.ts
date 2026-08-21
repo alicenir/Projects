@@ -5,11 +5,13 @@ import { isRequestAuthed, requireAuth } from "../middleware/auth.js";
 import { testConnection } from "../services/sabnzbd.js";
 import { invalidateMediaCache, testArrConnection } from "../services/arr.js";
 import { testConnection as testTeslaConnection } from "../services/teslamate.js";
+import { testConnection as testTautulliConnection } from "../services/tautulli.js";
+import { invalidateWeatherCache } from "../services/weather.js";
 
 export const settingsRouter = Router();
 
-const SECRET_KEYS = ["password_hash", "sabnzbd_api_key", "sonarr_api_key", "radarr_api_key", "teslamate_api_token"];
-const URL_KEYS = ["sabnzbd_url", "sonarr_url", "radarr_url", "teslamate_url"];
+const SECRET_KEYS = ["password_hash", "sabnzbd_api_key", "sonarr_api_key", "radarr_api_key", "teslamate_api_token", "tautulli_api_key"];
+const URL_KEYS = ["sabnzbd_url", "sonarr_url", "radarr_url", "teslamate_url", "tautulli_url"];
 
 settingsRouter.get("/", (req, res) => {
   const all = getAllSettings();
@@ -25,6 +27,8 @@ settingsRouter.get("/", (req, res) => {
   }
   // TeslaMateApi's token is optional (API_TOKEN_DISABLE=true), so a URL alone counts.
   visible.teslamate_configured = String(Boolean(all.teslamate_url));
+  visible.tautulli_configured = String(Boolean(all.tautulli_url && all.tautulli_api_key));
+  visible.weather_configured = String(Boolean(all.weather_latitude && all.weather_longitude));
   if (!authed) {
     for (const key of URL_KEYS) delete visible[key];
   }
@@ -42,6 +46,7 @@ settingsRouter.put("/", requireAuth, (req, res) => {
   }
   // Connection details may have changed — don't serve stale media from the old host.
   invalidateMediaCache();
+  invalidateWeatherCache();
   res.json({ ok: true });
 });
 
@@ -60,6 +65,13 @@ settingsRouter.post("/teslamate/test", requireAuth, async (req, res) => {
   const parsed = teslaTestSchema.safeParse(req.body);
   if (!parsed.success) return res.status(400).json({ error: "URL required" });
   const result = await testTeslaConnection(parsed.data.url, parsed.data.token ?? "");
+  res.json(result);
+});
+
+settingsRouter.post("/tautulli/test", requireAuth, async (req, res) => {
+  const parsed = testSchema.safeParse(req.body);
+  if (!parsed.success) return res.status(400).json({ error: "URL and API key required" });
+  const result = await testTautulliConnection(parsed.data.url, parsed.data.apiKey);
   res.json(result);
 });
 

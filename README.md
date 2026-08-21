@@ -22,6 +22,16 @@ modern UI, live SABnzbd downloads, and a Sonarr/Radarr "recently added" media ro
 - **Add movies & series** — search TMDB/TheTVDB *through* Radarr/Sonarr from the dashboard, pick a
   quality profile and root folder, and queue it with an immediate search. Titles already in your
   library are flagged and can't be added twice. Requires login when a password is set.
+- **Weather** — current conditions, a 3-day outlook and sunrise/sunset via
+  [Open-Meteo](https://open-meteo.com), which needs no API key or account. Pick your city by name in
+  Settings; only coordinates are stored.
+- **Now playing** — live Plex streams from Tautulli: who's watching what, progress, time remaining,
+  and whether it's transcoding or direct play.
+- **Upcoming** — what airs tonight and over the next week, from Sonarr's calendar, grouped by day
+  with already-downloaded episodes dimmed.
+- **App health dots** — each app tile carries a green/red dot from a reachability sweep every minute,
+  so you can see what's down before clicking. A 401/403 counts as up: the service is running, it just
+  wants credentials.
 - **Live SABnzbd widget** — real-time queue with per-item progress bars, speed, ETA, and pause/resume/remove
   controls, pushed to the browser over WebSockets (no page refresh, no polling on the client).
 - **Theming** — dark/light mode and a configurable accent color.
@@ -40,6 +50,9 @@ server/   Express + TypeScript + SQLite (better-sqlite3) + Socket.IO
 The server exposes a REST API under `/api`, a WebSocket channel for live SABnzbd queue updates, and (in
 production) serves the built client as static files — so the whole app runs as a single container on a
 single port.
+
+Weather is the only integration that talks to the public internet; everything else stays on your
+LAN. Health checks only ever return a status code and timing to the browser, never a response body.
 
 The Tesla widget reads `/api/v1/cars/:id/status` from TeslaMateApi and pushes snapshots over the same
 Socket.IO channel as SABnzbd. Polling backs off by state — 10s while driving or charging, 30s when
@@ -104,7 +117,9 @@ volume.
    *Settings → General*) to get the "Recently added" poster row.
 7. Optionally connect TeslaMateApi under **Settings → Car** — enter its URL (usually port 8080), hit
    **Test & list cars** to discover your vehicles, pick one, and save.
-8. Optionally set a password under **Settings → Security** to lock editing.
+8. Optionally set your city under **Settings → Weather**, and connect Tautulli under
+   **Settings → Plex** for the now-playing widget.
+9. Optionally set a password under **Settings → Security** to lock editing.
 
 ## Configuration reference
 

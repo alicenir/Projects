@@ -3,9 +3,10 @@ import { useEffect, useState } from "react";
 import toast from "react-hot-toast";
 import { api } from "../lib/api";
 import { useStore } from "../store/useStore";
+import type { GeocodeResult } from "../types";
 
 const ACCENTS = ["#7c5cff", "#22c55e", "#f97316", "#ef4444", "#06b6d4", "#ec4899"];
-const TABS = ["General", "Appearance", "Downloads", "Media", "Car", "Categories", "Security"] as const;
+const TABS = ["General", "Appearance", "Weather", "Downloads", "Media", "Plex", "Car", "Categories", "Security"] as const;
 
 type TabName = (typeof TABS)[number];
 
@@ -41,6 +42,11 @@ export function SettingsPanel({
   });
   const [testingArr, setTestingArr] = useState<"sonarr" | "radarr" | null>(null);
   const [tesla, setTesla] = useState({ url: "", token: "", carId: "1" });
+  const [plex, setPlex] = useState({ url: "", apiKey: "" });
+  const [testingPlex, setTestingPlex] = useState(false);
+  const [placeQuery, setPlaceQuery] = useState("");
+  const [places, setPlaces] = useState<GeocodeResult[]>([]);
+  const [searchingPlace, setSearchingPlace] = useState(false);
   const [testingTesla, setTestingTesla] = useState(false);
   const [teslaCars, setTeslaCars] = useState<{ id: number; name: string }[]>([]);
   const [currentPassword, setCurrentPassword] = useState("");
@@ -57,6 +63,8 @@ export function SettingsPanel({
     setTheme((settings.theme as "dark" | "light") ?? "dark");
     setAccent(settings.accent_color ?? "#7c5cff");
     setSabUrl(settings.sabnzbd_url ?? "");
+    setPlex({ url: settings.tautulli_url ?? "", apiKey: "" });
+    setPlaceQuery(settings.weather_label ?? "");
     setTesla({
       url: settings.teslamate_url ?? "",
       token: "",
@@ -140,6 +148,76 @@ export function SettingsPanel({
     });
     setArr((a) => ({ ...a, [`${service}_api_key`]: "" }));
     toast.success(`${service === "sonarr" ? "Sonarr" : "Radarr"} saved`);
+  }
+
+  async function searchPlaces() {
+    if (placeQuery.trim().length < 2) return toast.error("Type at least two characters");
+    setSearchingPlace(true);
+    try {
+      const data = await api.get<{ results: GeocodeResult[] }>(
+        `/weather/search?q=${encodeURIComponent(placeQuery.trim())}`
+      );
+      setPlaces(data.results);
+      if (data.results.length === 0) toast("No matching places");
+    } catch (err) {
+      toast.error(err instanceof Error ? err.message : "Lookup failed");
+    } finally {
+      setSearchingPlace(false);
+    }
+  }
+
+  async function usePlace(place: GeocodeResult) {
+    const label = [place.name, place.admin1, place.country].filter(Boolean).join(", ");
+    await api.put("/settings", {
+      weather_latitude: String(place.latitude),
+      weather_longitude: String(place.longitude),
+      weather_label: place.name,
+    });
+    setSettings({
+      ...settings!,
+      weather_latitude: String(place.latitude),
+      weather_longitude: String(place.longitude),
+      weather_label: place.name,
+      weather_configured: "true",
+    });
+    setPlaces([]);
+    setPlaceQuery(place.name);
+    toast.success(`Weather set to ${label}`);
+  }
+
+  async function saveWeatherUnits(units: "metric" | "imperial") {
+    await api.put("/settings", { weather_units: units });
+    setSettings({ ...settings!, weather_units: units });
+  }
+
+  async function testPlex() {
+    if (!plex.url || !plex.apiKey) return toast.error("Enter URL and API key");
+    setTestingPlex(true);
+    try {
+      const result = await api.post<{ ok: boolean; error?: string; name?: string }>(
+        "/settings/tautulli/test",
+        { url: plex.url, apiKey: plex.apiKey }
+      );
+      if (result.ok) toast.success(`Connected to ${result.name ?? "Plex"}`);
+      else toast.error(result.error ?? "Connection failed");
+    } catch (err) {
+      toast.error(err instanceof Error ? err.message : "Connection failed");
+    } finally {
+      setTestingPlex(false);
+    }
+  }
+
+  async function savePlex() {
+    const payload: Record<string, string> = { tautulli_url: plex.url };
+    if (plex.apiKey) payload.tautulli_api_key = plex.apiKey;
+    await api.put("/settings", payload);
+    setSettings({
+      ...settings!,
+      tautulli_url: plex.url,
+      tautulli_configured: String(Boolean(plex.url && (plex.apiKey || settings!.tautulli_configured === "true"))),
+    });
+    setPlex((s) => ({ ...s, apiKey: "" }));
+    toast.success("Tautulli saved");
   }
 
   async function testTesla() {
@@ -316,6 +394,121 @@ export function SettingsPanel({
                         />
                       ))}
                     </div>
+                  </div>
+                </div>
+              )}
+
+              {tab === "Weather" && (
+                <div className="flex flex-col gap-4">
+                  <div>
+                    <h2 className="text-lg font-semibold">Weather</h2>
+                    <p className="mt-1 text-sm text-ink-muted">
+                      Powered by Open-Meteo — no API key or account needed. Search for your city and
+                      pick it; the coordinates are stored, not the name.
+                    </p>
+                  </div>
+
+                  <div className="flex gap-2">
+                    <input
+                      value={placeQuery}
+                      onChange={(e) => setPlaceQuery(e.target.value)}
+                      onKeyDown={(e) => e.key === "Enter" && searchPlaces()}
+                      placeholder="e.g. Tel Aviv"
+                      className="field flex-1"
+                    />
+                    <button
+                      onClick={searchPlaces}
+                      disabled={searchingPlace}
+                      className="btn-outline disabled:opacity-50"
+                    >
+                      {searchingPlace ? "Searching…" : "Search"}
+                    </button>
+                  </div>
+
+                  {places.length > 0 && (
+                    <ul className="flex flex-col gap-1">
+                      {places.map((p) => (
+                        <li key={`${p.latitude},${p.longitude}`}>
+                          <button
+                            onClick={() => usePlace(p)}
+                            className="w-full rounded-xl px-3 py-2 text-left text-sm text-ink transition-colors hover-sunken"
+                          >
+                            {p.name}
+                            <span className="ml-2 text-xs text-ink-muted">
+                              {[p.admin1, p.country].filter(Boolean).join(", ")}
+                            </span>
+                          </button>
+                        </li>
+                      ))}
+                    </ul>
+                  )}
+
+                  {settings.weather_configured === "true" && (
+                    <p className="text-xs text-ink-muted">
+                      Currently showing <span className="font-semibold text-ink">{settings.weather_label}</span>{" "}
+                      ({Number(settings.weather_latitude).toFixed(2)},{" "}
+                      {Number(settings.weather_longitude).toFixed(2)})
+                    </p>
+                  )}
+
+                  <div>
+                    <p className="mb-2 text-sm text-ink-muted">Units</p>
+                    <div className="flex gap-2">
+                      {(["metric", "imperial"] as const).map((u) => (
+                        <button
+                          key={u}
+                          onClick={() => saveWeatherUnits(u)}
+                          className={`rounded-xl border px-4 py-2 text-sm capitalize ${
+                            (settings.weather_units ?? "metric") === u
+                              ? "border-accent text-accent"
+                              : "hairline text-ink-muted"
+                          }`}
+                        >
+                          {u === "metric" ? "°C · km/h" : "°F · mph"}
+                        </button>
+                      ))}
+                    </div>
+                  </div>
+                </div>
+              )}
+
+              {tab === "Plex" && (
+                <div className="flex flex-col gap-4">
+                  <div>
+                    <h2 className="text-lg font-semibold">Plex activity</h2>
+                    <p className="mt-1 text-sm text-ink-muted">
+                      Connect Tautulli to show what is streaming right now — who, what, how far in,
+                      and whether it is transcoding.
+                    </p>
+                  </div>
+                  <label className="text-sm text-ink-muted">
+                    Tautulli URL
+                    <input
+                      value={plex.url}
+                      onChange={(e) => setPlex((s) => ({ ...s, url: e.target.value }))}
+                      placeholder="http://tautulli.local:8181"
+                      className="field mt-1"
+                    />
+                  </label>
+                  <label className="text-sm text-ink-muted">
+                    API key (Tautulli → Settings → Web Interface)
+                    <input
+                      type="password"
+                      value={plex.apiKey}
+                      onChange={(e) => setPlex((s) => ({ ...s, apiKey: e.target.value }))}
+                      placeholder={
+                        settings.tautulli_configured === "true" ? "•••••••• (unchanged)" : "API key"
+                      }
+                      className="field mt-1"
+                    />
+                  </label>
+                  <div className="ml-auto flex gap-2">
+                    <button onClick={testPlex} disabled={testingPlex} className="btn-outline disabled:opacity-50">
+                      {testingPlex ? "Testing…" : "Test"}
+                    </button>
+                    <button onClick={savePlex} className="btn-primary">
+                      Save
+                    </button>
                   </div>
                 </div>
               )}

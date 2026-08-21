@@ -51,6 +51,12 @@ const defaultSettings: Record<string, string> = {
   teslamate_url: "",
   teslamate_api_token: "",
   teslamate_car_id: "1",
+  tautulli_url: "",
+  tautulli_api_key: "",
+  weather_latitude: "",
+  weather_longitude: "",
+  weather_label: "",
+  weather_units: "metric",
 };
 
 const insertSetting = db.prepare(

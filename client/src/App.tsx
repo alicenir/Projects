@@ -1,6 +1,9 @@
 import { useEffect, useState } from "react";
 import { AddMediaModal } from "./components/AddMediaModal";
 import { AppGrid } from "./components/AppGrid";
+import { NowPlayingWidget } from "./components/NowPlayingWidget";
+import { UpcomingSection } from "./components/UpcomingSection";
+import { WeatherWidget } from "./components/WeatherWidget";
 import { BookmarksSection } from "./components/BookmarksSection";
 import { CommandPalette } from "./components/CommandPalette";
 import { Header } from "./components/Header";
@@ -11,6 +14,7 @@ import { SabnzbdWidget } from "./components/SabnzbdWidget";
 import { SectionHeading } from "./components/SectionHeading";
 import { SettingsPanel } from "./components/SettingsPanel";
 import { TeslaWidget } from "./components/TeslaWidget";
+import { socket } from "./lib/socket";
 import { useStore } from "./store/useStore";
 import type { Item, ItemType } from "./types";
 
@@ -20,6 +24,7 @@ export default function App() {
   const addMediaOpen = useStore((s) => s.addMediaOpen);
   const setAddMediaOpen = useStore((s) => s.setAddMediaOpen);
   const bumpMediaRefresh = useStore((s) => s.bumpMediaRefresh);
+  const setHealth = useStore((s) => s.setHealth);
 
   const [query, setQuery] = useState("");
   const [paletteOpen, setPaletteOpen] = useState(false);
@@ -42,6 +47,16 @@ export default function App() {
     document.documentElement.classList.toggle("light", settings.theme === "light");
     document.documentElement.style.setProperty("--accent", settings.accent_color);
   }, [settings]);
+
+  useEffect(() => {
+    function onHealth(next: Record<number, any>) {
+      setHealth(next);
+    }
+    socket.on("health:update", onHealth);
+    return () => {
+      socket.off("health:update", onHealth);
+    };
+  }, [setHealth]);
 
   useEffect(() => {
     function handleKeyDown(e: KeyboardEvent) {
@@ -112,6 +127,8 @@ export default function App() {
             }}
           />
 
+          <UpcomingSection />
+
           <BookmarksSection
             bookmarks={bookmarks}
             onEdit={openEditModal}
@@ -131,7 +148,9 @@ export default function App() {
         </main>
 
         <aside className="flex min-w-0 flex-col gap-6">
+          <WeatherWidget />
           <SabnzbdWidget />
+          <NowPlayingWidget />
           <TeslaWidget />
         </aside>
       </div>

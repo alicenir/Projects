@@ -7,6 +7,7 @@ import {
   fetchCover,
   getAddOptions,
   getRecentMedia,
+  getUpcoming,
   lookup,
 } from "../services/arr.js";
 
@@ -90,4 +91,9 @@ mediaRouter.post("/add", requireAuth, async (req, res) => {
   } catch (err) {
     res.status(502).json({ error: err instanceof Error ? err.message : "Could not add" });
   }
+});
+
+mediaRouter.get("/upcoming", async (req, res) => {
+  const days = Math.min(Math.max(Number(req.query.days) || 7, 1), 30);
+  res.json(await getUpcoming(days));
 });
