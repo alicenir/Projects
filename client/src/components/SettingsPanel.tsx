@@ -14,11 +14,15 @@ export function SettingsPanel({
   open,
   onClose,
   initialTab,
+  onRequestLogin,
 }: {
   open: boolean;
   onClose: () => void;
   initialTab?: TabName;
+  onRequestLogin?: () => void;
 }) {
+  const authed = useStore((s) => s.authed);
+  const hasPassword = useStore((s) => s.hasPassword);
   const settings = useStore((s) => s.settings);
   const setSettings = useStore((s) => s.setSettings);
   const categories = useStore((s) => s.categories);
@@ -293,6 +297,8 @@ export function SettingsPanel({
 
   if (!settings) return null;
 
+  const locked = hasPassword && !authed;
+
   return (
     <AnimatePresence>
       {open && (
@@ -311,6 +317,29 @@ export function SettingsPanel({
             className="glass flex w-full max-w-2xl overflow-hidden rounded-2xl"
             style={{ maxHeight: "80vh" }}
           >
+            {locked ? (
+              <div className="flex w-full flex-col items-start gap-3 p-6">
+                <h2 className="text-lg font-semibold text-ink">Sign in to change settings</h2>
+                <p className="max-w-sm text-sm text-ink-muted">
+                  This dashboard is password protected, and this browser isn't signed in yet.
+                </p>
+                <div className="mt-1 flex gap-2">
+                  <button
+                    onClick={() => {
+                      onClose();
+                      onRequestLogin?.();
+                    }}
+                    className="btn-primary"
+                  >
+                    Sign in
+                  </button>
+                  <button onClick={onClose} className="btn-ghost">
+                    Cancel
+                  </button>
+                </div>
+              </div>
+            ) : (
+            <>
             <div className="w-40 shrink-0 hairline border-r p-3">
               {TABS.map((t) => (
                 <button
@@ -753,6 +782,8 @@ export function SettingsPanel({
                 </form>
               )}
             </div>
+            </>
+            )}
           </motion.div>
         </motion.div>
       )}

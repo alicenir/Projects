@@ -162,7 +162,12 @@ export default function App() {
       />
       <CommandPalette items={items} open={paletteOpen} onClose={() => setPaletteOpen(false)} />
       <LoginModal open={loginOpen} onClose={() => setLoginOpen(false)} />
-      <SettingsPanel open={settingsOpen} onClose={() => setSettingsOpen(false)} initialTab={settingsTab} />
+      <SettingsPanel
+        open={settingsOpen}
+        onClose={() => setSettingsOpen(false)}
+        initialTab={settingsTab}
+        onRequestLogin={() => setLoginOpen(true)}
+      />
       <ItemModal
         open={itemModalOpen}
         onClose={() => setItemModalOpen(false)}

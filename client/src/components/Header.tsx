@@ -26,6 +26,16 @@ export function Header({ query, onQueryChange, onOpenSettings, onOpenLogin }: Pr
     toggleEditMode();
   }
 
+  // Opening settings while signed out used to "work", then every action inside
+  // failed with a bare Unauthorized. Ask for the password up front instead.
+  function handleSettingsClick() {
+    if (!authed && hasPassword) {
+      onOpenLogin();
+      return;
+    }
+    onOpenSettings();
+  }
+
   // Shown whether or not this browser has a session — a phone is a separate
   // browser from the desktop, so hiding it there just made the feature look
   // missing. Tapping it prompts for the password instead, like Edit does.
@@ -71,7 +81,7 @@ export function Header({ query, onQueryChange, onOpenSettings, onOpenLogin }: Pr
           {editMode ? "Done" : "Edit"}
         </button>
         <button
-          onClick={onOpenSettings}
+          onClick={handleSettingsClick}
           className="hairline flex h-[42px] w-[42px] shrink-0 items-center justify-center rounded-xl border text-ink-muted transition-colors hover:border-accent/60 hover:text-ink"
           title="Settings"
         >
