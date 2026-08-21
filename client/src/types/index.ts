@@ -65,3 +65,30 @@ export interface SabnzbdSnapshot {
   queue: SabnzbdSlot[];
   history: SabnzbdHistorySlot[];
 }
+
+export type ArrService = "sonarr" | "radarr";
+
+export interface MediaItem {
+  id: string;
+  service: ArrService;
+  kind: "movie" | "episode";
+  title: string;
+  subtitle: string;
+  overview: string;
+  year: number | null;
+  poster: string | null;
+  addedAt: string;
+  runtime: number | null;
+  genres: string[];
+  rating: number | null;
+  seasonNumber: number | null;
+  episodeNumber: number | null;
+  link: string | null;
+  quality: string | null;
+}
+
+export interface MediaSnapshot {
+  configured: boolean;
+  items: MediaItem[];
+  errors: { service: ArrService; message: string }[];
+}

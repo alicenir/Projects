@@ -44,6 +44,10 @@ const defaultSettings: Record<string, string> = {
   password_hash: "",
   sabnzbd_url: "",
   sabnzbd_api_key: "",
+  sonarr_url: "",
+  sonarr_api_key: "",
+  radarr_url: "",
+  radarr_api_key: "",
 };
 
 const insertSetting = db.prepare(

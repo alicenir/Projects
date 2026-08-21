@@ -5,6 +5,7 @@ import { CommandPalette } from "./components/CommandPalette";
 import { Header } from "./components/Header";
 import { ItemModal } from "./components/ItemModal";
 import { LoginModal } from "./components/LoginModal";
+import { MediaSection } from "./components/MediaSection";
 import { SabnzbdWidget } from "./components/SabnzbdWidget";
 import { SectionHeading } from "./components/SectionHeading";
 import { SettingsPanel } from "./components/SettingsPanel";
@@ -94,6 +95,8 @@ export default function App() {
               <AppGrid items={apps} onEdit={openEditModal} onAddClick={() => openAddModal("app")} />
             </section>
           )}
+
+          <MediaSection />
 
           <BookmarksSection
             bookmarks={bookmarks}

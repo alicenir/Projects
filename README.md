@@ -1,7 +1,7 @@
 # Homebase
 
 A self-hosted startpage / dashboard, in the spirit of [Flame](https://hub.docker.com/r/pawelmalak/flame), with a
-modern UI and a live SABnzbd downloads widget built in.
+modern UI, live SABnzbd downloads, and a Sonarr/Radarr "recently added" media row built in.
 
 ## Features
 
@@ -10,6 +10,10 @@ modern UI and a live SABnzbd downloads widget built in.
 - **Command palette** — press `⌘K` / `Ctrl+K` to fuzzy-search and launch any app instantly.
 - **Web search fallback** — type in the search bar and hit Enter to fall back to your configured search
   engine when nothing local matches.
+- **Recently added media** — posters, titles and descriptions for the latest movies and episodes
+  imported by Radarr/Sonarr, so you can see what landed without opening either app. Click a poster
+  for the full synopsis; for TV that's the *episode's* own title and overview (e.g. "Severance ·
+  S02E05 — Trojan's Horse"), not just the series blurb.
 - **Live SABnzbd widget** — real-time queue with per-item progress bars, speed, ETA, and pause/resume/remove
   controls, pushed to the browser over WebSockets (no page refresh, no polling on the client).
 - **Theming** — dark/light mode and a configurable accent color.
@@ -28,6 +32,13 @@ server/   Express + TypeScript + SQLite (better-sqlite3) + Socket.IO
 The server exposes a REST API under `/api`, a WebSocket channel for live SABnzbd queue updates, and (in
 production) serves the built client as static files — so the whole app runs as a single container on a
 single port.
+
+Sonarr/Radarr metadata comes from your own instances — they already cache overviews and artwork
+from TMDB/TheTVDB when they add media, so no third-party API key is needed. Cover art is proxied
+through the backend (`/api/media/cover/...`), so the browser never sees an API key and doesn't need
+internet access of its own; only `/MediaCover/` paths are proxied, so the endpoint can't be used as
+a general request forwarder. Recently-added data is cached server-side for 60s and refreshed by the
+client every 5 minutes.
 
 SABnzbd credentials are stored server-side only; the browser never sees your API key. The server polls
 SABnzbd's JSON API (`/api?mode=queue` / `mode=history`) on an adaptive interval — every 2s while something
@@ -70,7 +81,9 @@ volume.
    `homebase` container with a persistent `homebase_data` volume.
 5. Open `http://<host>:5000`, go to **Settings → Downloads**, and enter your SABnzbd URL + API key (found
    in SABnzbd under **Config → General**).
-6. Optionally set a password under **Settings → Security** to lock editing.
+6. Optionally connect Sonarr and Radarr under **Settings → Media** (API key is in each app under
+   *Settings → General*) to get the "Recently added" poster row.
+7. Optionally set a password under **Settings → Security** to lock editing.
 
 ## Configuration reference
 
@@ -81,7 +94,7 @@ volume.
 | `JWT_SECRET`  | *(insecure default)* | Secret used to sign edit-mode login tokens — set this! |
 | `CORS_ORIGIN` | *(same-origin)*      | Only needed if you split client/server across origins |
 
-All other configuration (SABnzbd connection, theme, greeting, search engine, password) lives in the
+All other configuration (SABnzbd/Sonarr/Radarr connections, theme, greeting, search engine, password) lives in the
 database and is managed from the in-app **Settings** panel — nothing else needs to be set via environment
 variables or config files.
 
@@ -91,9 +104,9 @@ The SABnzbd widget is built on a small, self-contained service module
 (`server/src/services/sabnzbd.ts`) specifically so more *arr-stack integrations can be added the same way
 without touching the rest of the app. Natural next steps:
 
-- **More live widgets**: Sonarr/Radarr (upcoming & recently grabbed), qBittorrent/Transmission (torrent
-  queue alongside the Usenet one), Plex/Jellyfin (now playing + recently added), Overseerr/Ombi (pending
-  requests), Uptime Kuma (service health dots on each app card).
+- **More live widgets**: qBittorrent/Transmission (torrent queue alongside the Usenet one),
+  Plex/Jellyfin (now playing), Overseerr/Ombi (pending requests), Uptime Kuma (service health dots on
+  each app card), and an *upcoming* calendar from Sonarr to sit alongside "Recently added".
 - **Host stats widget**: CPU/RAM/disk/network via a tiny agent, shown as sparklines in the sidebar.
 - **Per-app health check**: ping each app's URL and show a green/red dot on its icon, so you know at a
   glance what's down.
@@ -108,6 +121,6 @@ without touching the rest of the app. Natural next steps:
 - **Reverse-proxy awareness**: auto-detect internal vs. external URLs (LAN IP vs. domain) and pick the
   right one depending on where the browser is connecting from — a genuinely nice Flame-beating feature.
 
-None of these are implemented yet, but the codebase is structured (typed REST API, a settings table for
+The rest are not implemented yet, but the codebase is structured (typed REST API, a settings table for
 arbitrary config, a Socket.IO channel already wired up) so each one is an incremental addition rather than
 a rewrite.

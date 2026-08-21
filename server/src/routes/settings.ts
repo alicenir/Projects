@@ -3,10 +3,12 @@ import { z } from "zod";
 import { getAllSettings, setSetting } from "../db.js";
 import { isRequestAuthed, requireAuth } from "../middleware/auth.js";
 import { testConnection } from "../services/sabnzbd.js";
+import { invalidateMediaCache, testArrConnection } from "../services/arr.js";
 
 export const settingsRouter = Router();
 
-const SECRET_KEYS = ["password_hash", "sabnzbd_api_key"];
+const SECRET_KEYS = ["password_hash", "sabnzbd_api_key", "sonarr_api_key", "radarr_api_key"];
+const URL_KEYS = ["sabnzbd_url", "sonarr_url", "radarr_url"];
 
 settingsRouter.get("/", (req, res) => {
   const all = getAllSettings();
@@ -14,10 +16,14 @@ settingsRouter.get("/", (req, res) => {
   const visible = Object.fromEntries(
     Object.entries(all).filter(([key]) => !SECRET_KEYS.includes(key))
   );
-  // Only reveal whether sabnzbd is configured, never the raw key, unless editing.
-  visible.sabnzbd_configured = String(Boolean(all.sabnzbd_url && all.sabnzbd_api_key));
+  // Only reveal whether a service is configured, never the raw key.
+  for (const service of ["sabnzbd", "sonarr", "radarr"]) {
+    visible[`${service}_configured`] = String(
+      Boolean(all[`${service}_url`] && all[`${service}_api_key`])
+    );
+  }
   if (!authed) {
-    delete visible.sabnzbd_url;
+    for (const key of URL_KEYS) delete visible[key];
   }
   res.json(visible);
 });
@@ -31,6 +37,8 @@ settingsRouter.put("/", requireAuth, (req, res) => {
     if (key === "password_hash") continue; // password changes go through /api/auth/set-password
     setSetting(key, value);
   }
+  // Connection details may have changed — don't serve stale media from the old host.
+  invalidateMediaCache();
   res.json({ ok: true });
 });
 
@@ -40,5 +48,14 @@ settingsRouter.post("/sabnzbd/test", requireAuth, async (req, res) => {
   const parsed = testSchema.safeParse(req.body);
   if (!parsed.success) return res.status(400).json({ error: "URL and API key required" });
   const result = await testConnection(parsed.data.url, parsed.data.apiKey);
+  res.json(result);
+});
+
+const arrTestSchema = testSchema.extend({ service: z.enum(["sonarr", "radarr"]) });
+
+settingsRouter.post("/arr/test", requireAuth, async (req, res) => {
+  const parsed = arrTestSchema.safeParse(req.body);
+  if (!parsed.success) return res.status(400).json({ error: "Service, URL and API key required" });
+  const result = await testArrConnection(parsed.data.service, parsed.data.url, parsed.data.apiKey);
   res.json(result);
 });

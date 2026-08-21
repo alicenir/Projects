@@ -11,6 +11,7 @@ import { authRouter } from "./routes/auth.js";
 import { itemsRouter } from "./routes/items.js";
 import { settingsRouter } from "./routes/settings.js";
 import { sabnzbdRouter } from "./routes/sabnzbd.js";
+import { mediaRouter } from "./routes/media.js";
 import { getSnapshot, startSabnzbdPolling } from "./services/sabnzbd.js";
 
 const __dirname = path.dirname(fileURLToPath(import.meta.url));
@@ -27,6 +28,7 @@ app.use("/api/auth", authRouter);
 app.use("/api", itemsRouter);
 app.use("/api/settings", settingsRouter);
 app.use("/api/sabnzbd", sabnzbdRouter);
+app.use("/api/media", mediaRouter);
 
 if (fs.existsSync(CLIENT_DIST)) {
   app.use(express.static(CLIENT_DIST));
