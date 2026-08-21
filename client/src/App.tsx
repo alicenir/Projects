@@ -1,0 +1,114 @@
+import { useEffect, useState } from "react";
+import { AppGrid } from "./components/AppGrid";
+import { BookmarksSection } from "./components/BookmarksSection";
+import { CommandPalette } from "./components/CommandPalette";
+import { Header } from "./components/Header";
+import { ItemModal } from "./components/ItemModal";
+import { LoginModal } from "./components/LoginModal";
+import { SabnzbdWidget } from "./components/SabnzbdWidget";
+import { SettingsPanel } from "./components/SettingsPanel";
+import { useStore } from "./store/useStore";
+import type { Item, ItemType } from "./types";
+
+export default function App() {
+  const { loadAll, items, settings, loading } = useStore();
+
+  const [query, setQuery] = useState("");
+  const [paletteOpen, setPaletteOpen] = useState(false);
+  const [loginOpen, setLoginOpen] = useState(false);
+  const [settingsOpen, setSettingsOpen] = useState(false);
+  const [itemModalOpen, setItemModalOpen] = useState(false);
+  const [editingItem, setEditingItem] = useState<Item | null>(null);
+  const [newItemDefaults, setNewItemDefaults] = useState<{ type: ItemType; categoryId: number | null }>({
+    type: "app",
+    categoryId: null,
+  });
+
+  useEffect(() => {
+    loadAll();
+  }, [loadAll]);
+
+  useEffect(() => {
+    if (!settings) return;
+    document.documentElement.classList.toggle("light", settings.theme === "light");
+    document.documentElement.style.setProperty("--accent", settings.accent_color);
+  }, [settings]);
+
+  useEffect(() => {
+    function handleKeyDown(e: KeyboardEvent) {
+      if ((e.metaKey || e.ctrlKey) && e.key.toLowerCase() === "k") {
+        e.preventDefault();
+        setPaletteOpen((v) => !v);
+      }
+    }
+    window.addEventListener("keydown", handleKeyDown);
+    return () => window.removeEventListener("keydown", handleKeyDown);
+  }, []);
+
+  function openAddModal(type: ItemType, categoryId: number | null = null) {
+    setEditingItem(null);
+    setNewItemDefaults({ type, categoryId });
+    setItemModalOpen(true);
+  }
+
+  function openEditModal(item: Item) {
+    setEditingItem(item);
+    setItemModalOpen(true);
+  }
+
+  const q = query.trim().toLowerCase();
+  const filtered = q ? items.filter((i) => i.name.toLowerCase().includes(q)) : items;
+  const apps = filtered.filter((i) => i.type === "app" || Boolean(i.is_pinned)).sort((a, b) => a.sort_order - b.sort_order);
+  const bookmarks = filtered
+    .filter((i) => i.type === "bookmark" && !i.is_pinned)
+    .sort((a, b) => a.sort_order - b.sort_order);
+
+  if (loading) {
+    return (
+      <div className="flex h-screen items-center justify-center text-slate-500">
+        <div className="shimmer h-8 w-8 rounded-full border-2 border-accent/30 border-t-accent" />
+      </div>
+    );
+  }
+
+  return (
+    <div className="mx-auto flex min-h-screen max-w-7xl flex-col gap-8 px-4 py-8 sm:px-8">
+      <Header
+        query={query}
+        onQueryChange={setQuery}
+        onOpenSettings={() => setSettingsOpen(true)}
+        onOpenLogin={() => setLoginOpen(true)}
+      />
+
+      <div className="grid grid-cols-1 gap-8 lg:grid-cols-[1fr_360px]">
+        <main className="flex flex-col gap-8">
+          <section>
+            <h2 className="mb-3 text-sm font-semibold uppercase tracking-wider text-slate-400">Apps</h2>
+            <AppGrid items={apps} onEdit={openEditModal} onAddClick={() => openAddModal("app")} />
+          </section>
+
+          <BookmarksSection
+            bookmarks={bookmarks}
+            onEdit={openEditModal}
+            onAddClick={(categoryId) => openAddModal("bookmark", categoryId)}
+          />
+        </main>
+
+        <aside className="flex flex-col gap-6">
+          <SabnzbdWidget />
+        </aside>
+      </div>
+
+      <CommandPalette items={items} open={paletteOpen} onClose={() => setPaletteOpen(false)} />
+      <LoginModal open={loginOpen} onClose={() => setLoginOpen(false)} />
+      <SettingsPanel open={settingsOpen} onClose={() => setSettingsOpen(false)} />
+      <ItemModal
+        open={itemModalOpen}
+        onClose={() => setItemModalOpen(false)}
+        editing={editingItem}
+        defaultType={newItemDefaults.type}
+        defaultCategoryId={newItemDefaults.categoryId}
+      />
+    </div>
+  );
+}

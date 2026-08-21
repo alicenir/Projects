@@ -1,0 +1,19 @@
+services:
+  homebase:
+    image: homebase:latest
+    build: .
+    container_name: homebase
+    restart: unless-stopped
+    ports:
+      - "5000:5000"
+    environment:
+      - PORT=5000
+      - DATA_DIR=/data
+      # Used to sign edit-mode login sessions. Set this to a long random
+      # string in production (e.g. `openssl rand -hex 32`).
+      - JWT_SECRET=change-me-in-production
+    volumes:
+      - homebase_data:/data
+
+volumes:
+  homebase_data:

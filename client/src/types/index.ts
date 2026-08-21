@@ -1,0 +1,67 @@
+export type ItemType = "app" | "bookmark";
+
+export interface Item {
+  id: number;
+  type: ItemType;
+  name: string;
+  url: string;
+  icon: string | null;
+  description: string | null;
+  category_id: number | null;
+  sort_order: number;
+  is_pinned: 0 | 1;
+}
+
+export interface Category {
+  id: number;
+  name: string;
+  sort_order: number;
+}
+
+export interface Settings {
+  theme: "dark" | "light";
+  accent_color: string;
+  greeting_name: string;
+  search_engine: string;
+  sabnzbd_configured: string;
+  sabnzbd_url?: string;
+  [key: string]: string | undefined;
+}
+
+export interface SabnzbdSlot {
+  nzo_id: string;
+  filename: string;
+  status: string;
+  percentage: number;
+  mb: number;
+  mbleft: number;
+  timeleft: string;
+  size: string;
+  sizeleft: string;
+  priority: string;
+  cat: string;
+}
+
+export interface SabnzbdHistorySlot {
+  nzo_id: string;
+  name: string;
+  status: string;
+  size: string;
+  completed: number;
+  fail_message: string;
+}
+
+export interface SabnzbdSnapshot {
+  configured: boolean;
+  reachable: boolean;
+  error?: string;
+  paused: boolean;
+  speed: string;
+  speedBps: number;
+  kbpersec: string;
+  timeleft: string;
+  sizeleft: string;
+  diskspace: string;
+  queue: SabnzbdSlot[];
+  history: SabnzbdHistorySlot[];
+}
