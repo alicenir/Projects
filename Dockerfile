@@ -7,24 +7,24 @@ COPY client/ ./
 RUN npm run build
 
 # --- Build server ---
+# better-sqlite3 downloads a prebuilt native binary for linux-musl during
+# `npm install` (see its "install" script), so no compiler toolchain is
+# needed here or in the runtime stage below.
 FROM node:22-alpine AS server-build
 WORKDIR /app/server
-RUN apk add --no-cache python3 make g++
 COPY server/package.json server/package-lock.json* ./
 RUN npm install
 COPY server/ ./
 RUN npm run build
+RUN npm prune --omit=dev
 
 # --- Runtime ---
 FROM node:22-alpine AS runtime
 WORKDIR /app
-RUN apk add --no-cache python3 make g++ && \
-    addgroup -S homebase && adduser -S homebase -G homebase
+RUN addgroup -S homebase && adduser -S homebase -G homebase
 
-COPY server/package.json server/package-lock.json* ./
-RUN npm install --omit=dev && \
-    apk del python3 make g++
-
+COPY --from=server-build /app/server/node_modules ./node_modules
+COPY --from=server-build /app/server/package.json ./package.json
 COPY --from=server-build /app/server/dist ./dist
 COPY --from=client-build /app/client/dist ./public
 
