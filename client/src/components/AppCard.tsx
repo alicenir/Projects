@@ -79,8 +79,11 @@ export function AppCard({ item, editMode, accent, onEdit, onDelete }: Props) {
               />
             )}
           </p>
+          {/* At two-up on a phone this truncates to the shared domain prefix on
+              every card — the port, the only distinguishing part, is what gets
+              cut. Hidden below sm; the name is what you tap anyway. */}
           <p
-            className="truncate text-[11px] font-medium lowercase"
+            className="hidden truncate text-[11px] font-medium lowercase sm:block"
             style={{ color: "var(--tile-accent)" }}
           >
             {displayHost(item.url)}
