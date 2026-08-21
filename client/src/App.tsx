@@ -109,51 +109,53 @@ export default function App() {
         onOpenLogin={() => setLoginOpen(true)}
       />
 
-      <div className="grid flex-1 grid-cols-1 gap-10 xl:grid-cols-[minmax(0,1fr)_380px]">
-        <main className="flex min-w-0 flex-col gap-10">
-          {(apps.length > 0 || editMode) && (
-            <section>
-              <SectionHeading major count={apps.length}>
-                Applications
-              </SectionHeading>
-              <AppGrid items={apps} onEdit={openEditModal} onAddClick={() => openAddModal("app")} />
-            </section>
-          )}
+      <main className="flex min-w-0 flex-1 flex-col gap-10">
+        {(apps.length > 0 || editMode) && (
+          <section>
+            <SectionHeading major count={apps.length}>
+              Applications
+            </SectionHeading>
+            <AppGrid items={apps} onEdit={openEditModal} onAddClick={() => openAddModal("app")} />
+          </section>
+        )}
 
-          <MediaSection
-            onConfigure={() => {
-              setSettingsTab("Media");
-              setSettingsOpen(true);
-            }}
-          />
-
-          <UpcomingSection />
-
-          <BookmarksSection
-            bookmarks={bookmarks}
-            onEdit={openEditModal}
-            onAddClick={(categoryId) => openAddModal("bookmark", categoryId)}
-          />
-
-          {apps.length === 0 && bookmarks.length === 0 && !editMode && (
-            <div className="glass flex flex-col items-center gap-3 rounded-2xl py-16 text-center">
-              <p className="text-lg font-semibold text-ink">Nothing here yet</p>
-              <p className="max-w-sm text-sm text-ink-muted">
-                {q
-                  ? "No apps or bookmarks match your search."
-                  : "Hit Edit to add your first app or bookmark."}
-              </p>
-            </div>
-          )}
-        </main>
-
-        <aside className="flex min-w-0 flex-col gap-6">
-          <WeatherWidget />
+        {/* Live status first. auto-fit keeps the row filled no matter how many
+            of these are configured, and empty:hidden avoids a stray gap when
+            none of them are. items-start stops a busy download queue from
+            stretching the shorter cards. */}
+        <section className="grid grid-cols-[repeat(auto-fit,minmax(300px,1fr))] items-start gap-6 empty:hidden">
           <SabnzbdWidget />
           <NowPlayingWidget />
           <TeslaWidget />
-        </aside>
-      </div>
+          <WeatherWidget />
+        </section>
+
+        <MediaSection
+          onConfigure={() => {
+            setSettingsTab("Media");
+            setSettingsOpen(true);
+          }}
+        />
+
+        <UpcomingSection />
+
+        <BookmarksSection
+          bookmarks={bookmarks}
+          onEdit={openEditModal}
+          onAddClick={(categoryId) => openAddModal("bookmark", categoryId)}
+        />
+
+        {apps.length === 0 && bookmarks.length === 0 && !editMode && (
+          <div className="glass flex flex-col items-center gap-3 rounded-2xl py-16 text-center">
+            <p className="text-lg font-semibold text-ink">Nothing here yet</p>
+            <p className="max-w-sm text-sm text-ink-muted">
+              {q
+                ? "No apps or bookmarks match your search."
+                : "Hit Edit to add your first app or bookmark."}
+            </p>
+          </div>
+        )}
+      </main>
 
       <AddMediaModal
         open={addMediaOpen}

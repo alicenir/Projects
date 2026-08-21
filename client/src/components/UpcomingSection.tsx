@@ -83,7 +83,7 @@ export function UpcomingSection() {
         Upcoming
       </SectionHeading>
 
-      <div className="flex flex-col gap-4">
+      <div className="grid grid-cols-1 items-start gap-x-8 gap-y-5 sm:grid-cols-2 xl:grid-cols-3">
         {groups.map((group) => (
           <div key={group.label}>
             <p className="mb-2 text-[11px] font-bold uppercase tracking-wider text-accent">
