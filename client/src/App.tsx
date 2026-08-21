@@ -79,7 +79,7 @@ export default function App() {
   }
 
   return (
-    <div className="mx-auto flex min-h-screen w-full max-w-[1800px] flex-col gap-10 px-5 py-8 sm:px-8 lg:px-12 lg:py-10">
+    <div className="mx-auto flex min-h-screen w-full max-w-[1800px] flex-col gap-10 px-5 pb-24 pt-8 sm:px-8 sm:pb-8 lg:px-12 lg:py-10">
       <Header
         query={query}
         onQueryChange={setQuery}

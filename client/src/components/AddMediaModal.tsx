@@ -137,41 +137,57 @@ export function AddMediaModal({ open, onClose, onAdded }: Props) {
           animate={{ opacity: 1 }}
           exit={{ opacity: 0 }}
           onClick={onClose}
-          className="fixed inset-0 z-50 flex items-start justify-center bg-black/60 p-4 pt-[8vh]"
+          className="fixed inset-0 z-50 flex items-start justify-center bg-black/60 p-3 pt-[4vh] sm:p-4 sm:pt-[8vh]"
         >
           <motion.div
             initial={{ opacity: 0, scale: 0.97 }}
             animate={{ opacity: 1, scale: 1 }}
             exit={{ opacity: 0, scale: 0.97 }}
             onClick={(e) => e.stopPropagation()}
-            className="glass flex w-full max-w-3xl flex-col overflow-hidden rounded-2xl"
-            style={{ maxHeight: "80vh" }}
+            className="glass flex h-[88vh] w-full max-w-3xl flex-col overflow-hidden rounded-2xl sm:h-auto sm:max-h-[80vh]"
           >
-            <div className="flex items-center gap-3 p-4 pb-3">
-              <div className="flex gap-1 rounded-xl sunken p-1">
-                {(["radarr", "sonarr"] as ArrService[]).map((s) => (
-                  <button
-                    key={s}
-                    onClick={() => {
-                      setService(s);
-                      setSelected(null);
-                    }}
-                    className={`rounded-lg px-3 py-1.5 text-sm font-semibold transition-colors ${
-                      service === s ? "bg-accent text-white" : "text-ink-muted hover:text-ink"
-                    }`}
-                  >
-                    {s === "radarr" ? "Movie" : "TV series"}
-                  </button>
-                ))}
+            {/* Stacked on phones — side by side the search field gets squeezed
+                to a couple of characters at 390px. */}
+            <div className="flex flex-col gap-2 p-4 pb-3 sm:flex-row sm:items-center sm:gap-3">
+              <div className="flex items-center gap-2">
+                <div className="flex gap-1 rounded-xl sunken p-1">
+                  {(["radarr", "sonarr"] as ArrService[]).map((s) => (
+                    <button
+                      key={s}
+                      onClick={() => {
+                        setService(s);
+                        setSelected(null);
+                      }}
+                      className={`rounded-lg px-3 py-1.5 text-sm font-semibold transition-colors ${
+                        service === s ? "bg-accent text-white" : "text-ink-muted hover:text-ink"
+                      }`}
+                    >
+                      {s === "radarr" ? "Movie" : "TV series"}
+                    </button>
+                  ))}
+                </div>
+                <button
+                  onClick={onClose}
+                  aria-label="Close"
+                  className="ml-auto px-2 text-xl leading-none text-ink-muted hover:text-ink sm:hidden"
+                >
+                  ×
+                </button>
               </div>
+
               <input
                 autoFocus
                 value={term}
                 onChange={(e) => setTerm(e.target.value)}
                 placeholder={service === "radarr" ? "Search for a movie…" : "Search for a series…"}
-                className="field flex-1"
+                className="field sm:flex-1"
               />
-              <button onClick={onClose} className="text-lg leading-none text-ink-muted hover:text-ink">
+
+              <button
+                onClick={onClose}
+                aria-label="Close"
+                className="hidden text-lg leading-none text-ink-muted hover:text-ink sm:block"
+              >
                 ×
               </button>
             </div>
@@ -252,7 +268,7 @@ export function AddMediaModal({ open, onClose, onAdded }: Props) {
             {selected && (
               <div className="hairline border-t p-4">
                 <div className="flex flex-wrap items-end gap-3">
-                  <label className="min-w-0 flex-1 text-xs text-ink-muted">
+                  <label className="min-w-0 basis-full text-xs text-ink-muted sm:flex-1 sm:basis-0">
                     Quality
                     <select
                       value={qualityProfileId ?? ""}
@@ -267,7 +283,7 @@ export function AddMediaModal({ open, onClose, onAdded }: Props) {
                     </select>
                   </label>
 
-                  <label className="min-w-0 flex-1 text-xs text-ink-muted">
+                  <label className="min-w-0 basis-full text-xs text-ink-muted sm:flex-1 sm:basis-0">
                     Folder
                     <select
                       value={rootFolderPath}
@@ -283,7 +299,7 @@ export function AddMediaModal({ open, onClose, onAdded }: Props) {
                   </label>
 
                   {selected.kind === "series" && (
-                    <label className="min-w-0 flex-1 text-xs text-ink-muted">
+                    <label className="min-w-0 basis-full text-xs text-ink-muted sm:flex-1 sm:basis-0">
                       Monitor
                       <select
                         value={monitor}
@@ -298,7 +314,7 @@ export function AddMediaModal({ open, onClose, onAdded }: Props) {
                   )}
                 </div>
 
-                <div className="mt-3 flex items-center gap-3">
+                <div className="mt-3 flex flex-wrap items-center gap-3">
                   <label className="flex items-center gap-2 text-xs text-ink-muted">
                     <input
                       type="checkbox"
