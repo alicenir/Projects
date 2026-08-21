@@ -1,6 +1,7 @@
 import { AnimatePresence, motion } from "framer-motion";
 import { useEffect, useState } from "react";
 import { api } from "../lib/api";
+import { useStore } from "../store/useStore";
 import type { MediaItem, MediaSnapshot } from "../types";
 import { SectionHeading } from "./SectionHeading";
 
@@ -152,18 +153,26 @@ function DetailModal({ item, onClose }: { item: MediaItem | null; onClose: () =>
   );
 }
 
-export function MediaSection() {
+export function MediaSection({ onConfigure }: { onConfigure?: () => void }) {
+  const editMode = useStore((s) => s.editMode);
   const [snapshot, setSnapshot] = useState<MediaSnapshot | null>(null);
   const [selected, setSelected] = useState<MediaItem | null>(null);
+  const [unavailable, setUnavailable] = useState(false);
 
   useEffect(() => {
     let cancelled = false;
     async function load() {
       try {
         const data = await api.get<MediaSnapshot>("/media/recent?limit=12");
-        if (!cancelled) setSnapshot(data);
+        if (cancelled) return;
+        setSnapshot(data);
+        setUnavailable(false);
       } catch {
-        if (!cancelled) setSnapshot({ configured: false, items: [], errors: [] });
+        // The endpoint doesn't exist (older server build) or the request failed.
+        if (!cancelled) {
+          setSnapshot({ configured: false, items: [], errors: [] });
+          setUnavailable(true);
+        }
       }
     }
     load();
@@ -182,8 +191,51 @@ export function MediaSection() {
     return () => window.removeEventListener("keydown", onKey);
   }, []);
 
-  if (!snapshot || !snapshot.configured) return null;
-  if (snapshot.items.length === 0 && snapshot.errors.length === 0) return null;
+  if (!snapshot) return null;
+
+  // Not connected yet. Stay out of the way normally, but surface the feature in
+  // edit mode so it's discoverable instead of silently invisible.
+  if (!snapshot.configured) {
+    if (!editMode) return null;
+    return (
+      <section>
+        <SectionHeading major>Recently added</SectionHeading>
+        <div className="hairline flex flex-col items-start gap-3 rounded-2xl border border-dashed p-5">
+          <div>
+            <p className="text-sm font-semibold text-ink">
+              {unavailable
+                ? "This server build doesn't have the media API yet"
+                : "Connect Sonarr or Radarr"}
+            </p>
+            <p className="mt-1 max-w-lg text-sm text-ink-muted">
+              {unavailable
+                ? "Rebuild and redeploy the container from the latest commit, then connect your libraries."
+                : "Show the latest downloaded movies and episodes here, with posters and descriptions pulled from your own instances."}
+            </p>
+          </div>
+          {!unavailable && onConfigure && (
+            <button onClick={onConfigure} className="btn-primary">
+              Open media settings
+            </button>
+          )}
+        </div>
+      </section>
+    );
+  }
+
+  if (snapshot.items.length === 0 && snapshot.errors.length === 0) {
+    if (!editMode) return null;
+    return (
+      <section>
+        <SectionHeading major count={0}>
+          Recently added
+        </SectionHeading>
+        <p className="hairline rounded-2xl border border-dashed p-5 text-sm text-ink-muted">
+          Connected, but nothing has been imported recently.
+        </p>
+      </section>
+    );
+  }
 
   return (
     <section>

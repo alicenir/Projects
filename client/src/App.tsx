@@ -20,6 +20,7 @@ export default function App() {
   const [paletteOpen, setPaletteOpen] = useState(false);
   const [loginOpen, setLoginOpen] = useState(false);
   const [settingsOpen, setSettingsOpen] = useState(false);
+  const [settingsTab, setSettingsTab] = useState<"General" | "Media">("General");
   const [itemModalOpen, setItemModalOpen] = useState(false);
   const [editingItem, setEditingItem] = useState<Item | null>(null);
   const [newItemDefaults, setNewItemDefaults] = useState<{ type: ItemType; categoryId: number | null }>({
@@ -81,7 +82,10 @@ export default function App() {
       <Header
         query={query}
         onQueryChange={setQuery}
-        onOpenSettings={() => setSettingsOpen(true)}
+        onOpenSettings={() => {
+          setSettingsTab("General");
+          setSettingsOpen(true);
+        }}
         onOpenLogin={() => setLoginOpen(true)}
       />
 
@@ -96,7 +100,12 @@ export default function App() {
             </section>
           )}
 
-          <MediaSection />
+          <MediaSection
+            onConfigure={() => {
+              setSettingsTab("Media");
+              setSettingsOpen(true);
+            }}
+          />
 
           <BookmarksSection
             bookmarks={bookmarks}
@@ -123,7 +132,7 @@ export default function App() {
 
       <CommandPalette items={items} open={paletteOpen} onClose={() => setPaletteOpen(false)} />
       <LoginModal open={loginOpen} onClose={() => setLoginOpen(false)} />
-      <SettingsPanel open={settingsOpen} onClose={() => setSettingsOpen(false)} />
+      <SettingsPanel open={settingsOpen} onClose={() => setSettingsOpen(false)} initialTab={settingsTab} />
       <ItemModal
         open={itemModalOpen}
         onClose={() => setItemModalOpen(false)}

@@ -7,14 +7,24 @@ import { useStore } from "../store/useStore";
 const ACCENTS = ["#7c5cff", "#22c55e", "#f97316", "#ef4444", "#06b6d4", "#ec4899"];
 const TABS = ["General", "Appearance", "Downloads", "Media", "Categories", "Security"] as const;
 
-export function SettingsPanel({ open, onClose }: { open: boolean; onClose: () => void }) {
+type TabName = (typeof TABS)[number];
+
+export function SettingsPanel({
+  open,
+  onClose,
+  initialTab,
+}: {
+  open: boolean;
+  onClose: () => void;
+  initialTab?: TabName;
+}) {
   const settings = useStore((s) => s.settings);
   const setSettings = useStore((s) => s.setSettings);
   const categories = useStore((s) => s.categories);
   const upsertCategory = useStore((s) => s.upsertCategory);
   const removeCategory = useStore((s) => s.removeCategory);
 
-  const [tab, setTab] = useState<(typeof TABS)[number]>("General");
+  const [tab, setTab] = useState<TabName>("General");
   const [greeting, setGreeting] = useState("");
   const [searchEngine, setSearchEngine] = useState("");
   const [theme, setTheme] = useState<"dark" | "light">("dark");
@@ -32,6 +42,10 @@ export function SettingsPanel({ open, onClose }: { open: boolean; onClose: () =>
   const [testingArr, setTestingArr] = useState<"sonarr" | "radarr" | null>(null);
   const [currentPassword, setCurrentPassword] = useState("");
   const [newPassword, setNewPassword] = useState("");
+
+  useEffect(() => {
+    if (open && initialTab) setTab(initialTab);
+  }, [open, initialTab]);
 
   useEffect(() => {
     if (!settings) return;
