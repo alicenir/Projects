@@ -14,7 +14,7 @@ function barColor(status: string) {
     case "paused":
       return "bg-amber-500";
     case "queued":
-      return "bg-slate-600";
+      return "bg-ink-muted";
     default:
       return "bg-emerald-500";
   }
@@ -23,10 +23,10 @@ function barColor(status: string) {
 function Stat({ label, value, accent }: { label: string; value: string; accent?: boolean }) {
   return (
     <div className="min-w-0">
-      <p className="text-[10px] font-medium uppercase tracking-wider text-slate-500">{label}</p>
+      <p className="text-[10px] font-medium uppercase tracking-wider text-ink-muted">{label}</p>
       <p
         className={`truncate text-sm font-semibold tabular-nums ${
-          accent ? "text-accent" : "text-slate-200"
+          accent ? "text-accent" : "text-ink"
         }`}
       >
         {value}
@@ -51,18 +51,18 @@ function QueueRow({ slot, authed }: { slot: SabnzbdSlot; authed: boolean }) {
       layout
       initial={{ opacity: 0, y: 6 }}
       animate={{ opacity: 1, y: 0 }}
-      className="group rounded-xl bg-white/[0.04] p-3 transition-colors hover:bg-white/[0.07]"
+      className="group rounded-xl sunken p-3 transition-colors hover-sunken"
     >
       <div className="flex items-baseline gap-3">
         <p className="min-w-0 flex-1 truncate text-sm font-medium" title={slot.filename}>
           {slot.filename}
         </p>
-        <span className="shrink-0 text-sm font-semibold tabular-nums text-slate-300">
+        <span className="shrink-0 text-sm font-semibold tabular-nums text-ink-muted">
           {slot.percentage.toFixed(0)}%
         </span>
       </div>
 
-      <div className="mt-2 h-1.5 w-full overflow-hidden rounded-full bg-white/10">
+      <div className="mt-2 h-1.5 w-full overflow-hidden rounded-full sunken-strong">
         <motion.div
           className={`h-full rounded-full ${barColor(slot.status)}`}
           initial={false}
@@ -71,9 +71,9 @@ function QueueRow({ slot, authed }: { slot: SabnzbdSlot; authed: boolean }) {
         />
       </div>
 
-      <div className="mt-2 flex items-center gap-2 text-xs text-slate-500">
+      <div className="mt-2 flex items-center gap-2 text-xs text-ink-muted">
         {slot.cat && (
-          <span className="shrink-0 rounded bg-white/10 px-1.5 py-0.5 text-[10px] font-medium text-slate-400">
+          <span className="shrink-0 rounded sunken-strong px-1.5 py-0.5 text-[10px] font-medium text-ink-muted">
             {slot.cat}
           </span>
         )}
@@ -101,13 +101,13 @@ function QueueRow({ slot, authed }: { slot: SabnzbdSlot; authed: boolean }) {
                   "Update"
                 )
               }
-              className="font-medium text-slate-400 hover:text-accent"
+              className="font-medium text-ink-muted hover:text-accent"
             >
               {isPaused ? "Resume" : "Pause"}
             </button>
             <button
               onClick={() => act(() => api.delete(`/sabnzbd/jobs/${slot.nzo_id}`), "Remove")}
-              className="font-medium text-slate-400 hover:text-red-400"
+              className="font-medium text-ink-muted hover:text-red-400"
             >
               Remove
             </button>
@@ -154,7 +154,7 @@ export function SabnzbdWidget() {
         </div>
         <div className="min-w-0 flex-1">
           <h2 className="text-base font-semibold leading-tight">Downloads</h2>
-          <p className="truncate text-xs text-slate-500">
+          <p className="truncate text-xs text-ink-muted">
             {!sabnzbd.reachable
               ? "Cannot reach SABnzbd"
               : sabnzbd.paused
@@ -168,7 +168,7 @@ export function SabnzbdWidget() {
         {sabnzbd.reachable && authed && (
           <button
             onClick={toggleQueue}
-            className="shrink-0 whitespace-nowrap rounded-lg border border-white/10 px-2.5 py-1.5 text-xs font-medium text-slate-300 transition-colors hover:border-accent/60 hover:text-accent"
+            className="shrink-0 whitespace-nowrap rounded-lg hairline border px-2.5 py-1.5 text-xs font-medium text-ink-muted transition-colors hover:border-accent/60 hover:text-accent"
           >
             {sabnzbd.paused ? "Resume" : "Pause"}
           </button>
@@ -176,7 +176,7 @@ export function SabnzbdWidget() {
       </div>
 
       {sabnzbd.reachable && (
-        <div className="mt-4 grid grid-cols-3 gap-3 rounded-xl bg-white/[0.04] px-3.5 py-2.5">
+        <div className="mt-4 grid grid-cols-3 gap-3 rounded-xl sunken px-3.5 py-2.5">
           <Stat label="Speed" value={formatSpeed(sabnzbd.speedBps)} accent={!sabnzbd.paused && active > 0} />
           <Stat label="Time left" value={formatTimeLeft(sabnzbd.timeleft)} />
           <Stat label="Remaining" value={sabnzbd.sizeleft || "—"} />
@@ -190,7 +190,7 @@ export function SabnzbdWidget() {
             : "SABnzbd is unreachable — check the URL and API key in Settings."}
         </p>
       ) : active === 0 ? (
-        <p className="py-6 text-center text-sm text-slate-500">Nothing downloading right now</p>
+        <p className="py-6 text-center text-sm text-ink-muted">Nothing downloading right now</p>
       ) : (
         <div className="mt-3 flex flex-col gap-2">
           {sabnzbd.queue.map((slot) => (
@@ -200,14 +200,14 @@ export function SabnzbdWidget() {
       )}
 
       {sabnzbd.history.length > 0 && (
-        <div className="mt-4 border-t border-white/5 pt-3">
-          <h3 className="mb-2 text-[10px] font-semibold uppercase tracking-wider text-slate-500">
+        <div className="mt-4 hairline border-t pt-3">
+          <h3 className="mb-2 text-[10px] font-semibold uppercase tracking-wider text-ink-muted">
             Recently completed
           </h3>
           <ul className="flex flex-col gap-1.5">
             {sabnzbd.history.slice(0, 5).map((h) => (
               <li key={h.nzo_id} className="flex items-center gap-3 text-xs">
-                <span className="min-w-0 flex-1 truncate text-slate-400" title={h.name}>
+                <span className="min-w-0 flex-1 truncate text-ink-muted" title={h.name}>
                   {h.name}
                 </span>
                 <span

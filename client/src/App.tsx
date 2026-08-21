@@ -6,12 +6,14 @@ import { Header } from "./components/Header";
 import { ItemModal } from "./components/ItemModal";
 import { LoginModal } from "./components/LoginModal";
 import { SabnzbdWidget } from "./components/SabnzbdWidget";
+import { SectionHeading } from "./components/SectionHeading";
 import { SettingsPanel } from "./components/SettingsPanel";
 import { useStore } from "./store/useStore";
 import type { Item, ItemType } from "./types";
 
 export default function App() {
   const { loadAll, items, settings, loading } = useStore();
+  const editMode = useStore((s) => s.editMode);
 
   const [query, setQuery] = useState("");
   const [paletteOpen, setPaletteOpen] = useState(false);
@@ -58,21 +60,23 @@ export default function App() {
 
   const q = query.trim().toLowerCase();
   const filtered = q ? items.filter((i) => i.name.toLowerCase().includes(q)) : items;
-  const apps = filtered.filter((i) => i.type === "app" || Boolean(i.is_pinned)).sort((a, b) => a.sort_order - b.sort_order);
+  const apps = filtered
+    .filter((i) => i.type === "app" || Boolean(i.is_pinned))
+    .sort((a, b) => a.sort_order - b.sort_order);
   const bookmarks = filtered
     .filter((i) => i.type === "bookmark" && !i.is_pinned)
     .sort((a, b) => a.sort_order - b.sort_order);
 
   if (loading) {
     return (
-      <div className="flex h-screen items-center justify-center text-slate-500">
+      <div className="flex h-screen items-center justify-center">
         <div className="shimmer h-8 w-8 rounded-full border-2 border-accent/30 border-t-accent" />
       </div>
     );
   }
 
   return (
-    <div className="mx-auto flex min-h-screen max-w-7xl flex-col gap-8 px-4 py-8 sm:px-8">
+    <div className="mx-auto flex min-h-screen w-full max-w-[1800px] flex-col gap-10 px-5 py-8 sm:px-8 lg:px-12 lg:py-10">
       <Header
         query={query}
         onQueryChange={setQuery}
@@ -80,21 +84,36 @@ export default function App() {
         onOpenLogin={() => setLoginOpen(true)}
       />
 
-      <div className="grid grid-cols-1 gap-8 lg:grid-cols-[1fr_360px]">
-        <main className="flex flex-col gap-8">
-          <section>
-            <h2 className="mb-3 text-sm font-semibold uppercase tracking-wider text-slate-400">Apps</h2>
-            <AppGrid items={apps} onEdit={openEditModal} onAddClick={() => openAddModal("app")} />
-          </section>
+      <div className="grid flex-1 grid-cols-1 gap-10 xl:grid-cols-[minmax(0,1fr)_380px]">
+        <main className="flex min-w-0 flex-col gap-10">
+          {(apps.length > 0 || editMode) && (
+            <section>
+              <SectionHeading major count={apps.length}>
+                Applications
+              </SectionHeading>
+              <AppGrid items={apps} onEdit={openEditModal} onAddClick={() => openAddModal("app")} />
+            </section>
+          )}
 
           <BookmarksSection
             bookmarks={bookmarks}
             onEdit={openEditModal}
             onAddClick={(categoryId) => openAddModal("bookmark", categoryId)}
           />
+
+          {apps.length === 0 && bookmarks.length === 0 && !editMode && (
+            <div className="glass flex flex-col items-center gap-3 rounded-2xl py-16 text-center">
+              <p className="text-lg font-semibold text-ink">Nothing here yet</p>
+              <p className="max-w-sm text-sm text-ink-muted">
+                {q
+                  ? "No apps or bookmarks match your search."
+                  : "Hit Edit to add your first app or bookmark."}
+              </p>
+            </div>
+          )}
         </main>
 
-        <aside className="flex flex-col gap-6">
+        <aside className="flex min-w-0 flex-col gap-6">
           <SabnzbdWidget />
         </aside>
       </div>

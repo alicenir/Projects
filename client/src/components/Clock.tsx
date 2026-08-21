@@ -1,10 +1,10 @@
 import { useEffect, useState } from "react";
 
-export function Clock({ greeting }: { greeting: string }) {
+export function Greeting({ name }: { name: string }) {
   const [now, setNow] = useState(new Date());
 
   useEffect(() => {
-    const id = setInterval(() => setNow(new Date()), 1000 * 30);
+    const id = setInterval(() => setNow(new Date()), 1000 * 20);
     return () => clearInterval(id);
   }, []);
 
@@ -12,15 +12,23 @@ export function Clock({ greeting }: { greeting: string }) {
   const timeGreeting = hour < 12 ? "Good morning" : hour < 18 ? "Good afternoon" : "Good evening";
 
   return (
-    <div>
-      <p className="text-2xl font-bold tracking-tight sm:text-3xl">
-        {now.toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" })}
+    <div className="min-w-0">
+      <p className="text-[11px] font-semibold uppercase tracking-[0.18em] text-ink-muted">
+        {now.toLocaleDateString([], { weekday: "long", day: "numeric", month: "long", year: "numeric" })}
+        <span className="mx-2 text-accent">•</span>
+        <span className="tabular-nums">
+          {now.toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" })}
+        </span>
       </p>
-      <p className="text-sm text-slate-400">
+      <h1 className="mt-1.5 text-[clamp(2rem,4.2vw,3.25rem)] font-extrabold leading-[1.05] tracking-tight text-ink">
         {timeGreeting}
-        {greeting ? `, ${greeting}` : ""} ·{" "}
-        {now.toLocaleDateString([], { weekday: "long", month: "long", day: "numeric" })}
-      </p>
+        {name ? (
+          <>
+            , <span className="text-accent">{name}</span>
+          </>
+        ) : null}
+        !
+      </h1>
     </div>
   );
 }

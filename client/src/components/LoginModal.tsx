@@ -50,20 +50,20 @@ export function LoginModal({ open, onClose }: { open: boolean; onClose: () => vo
               value={password}
               onChange={(e) => setPassword(e.target.value)}
               placeholder="Password"
-              className="w-full rounded-xl border border-white/10 bg-white/5 px-4 py-2.5 text-sm focus:border-accent/60 focus:outline-none"
+              className="field"
             />
             <div className="mt-4 flex justify-end gap-2">
               <button
                 type="button"
                 onClick={onClose}
-                className="rounded-xl px-4 py-2 text-sm text-slate-400 hover:text-white"
+                className="btn-ghost"
               >
                 Cancel
               </button>
               <button
                 type="submit"
                 disabled={loading}
-                className="rounded-xl bg-accent px-4 py-2 text-sm font-medium text-white disabled:opacity-50"
+                className="btn-primary"
               >
                 {loading ? "Signing in…" : "Sign in"}
               </button>

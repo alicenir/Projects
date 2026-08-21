@@ -100,14 +100,14 @@ export function ItemModal({ open, onClose, editing, defaultType, defaultCategory
           >
             <h2 className="mb-4 text-lg font-semibold">{editing ? "Edit" : "Add"} link</h2>
 
-            <div className="mb-3 flex gap-2 rounded-xl bg-white/5 p-1">
+            <div className="mb-3 flex gap-2 rounded-xl sunken p-1">
               {(["app", "bookmark"] as ItemType[]).map((t) => (
                 <button
                   type="button"
                   key={t}
                   onClick={() => setType(t)}
                   className={`flex-1 rounded-lg py-1.5 text-sm capitalize transition-colors ${
-                    type === t ? "bg-accent text-white" : "text-slate-400 hover:text-white"
+                    type === t ? "bg-accent text-white" : "text-ink-muted hover:text-ink"
                   }`}
                 >
                   {t}
@@ -122,20 +122,20 @@ export function ItemModal({ open, onClose, editing, defaultType, defaultCategory
                 value={form.name}
                 onChange={(e) => setForm((f) => ({ ...f, name: e.target.value }))}
                 placeholder="Name"
-                className="rounded-xl border border-white/10 bg-white/5 px-4 py-2.5 text-sm focus:border-accent/60 focus:outline-none"
+                className="field"
               />
               <input
                 required
                 value={form.url}
                 onChange={(e) => setForm((f) => ({ ...f, url: e.target.value }))}
                 placeholder="URL (e.g. https://sonarr.local)"
-                className="rounded-xl border border-white/10 bg-white/5 px-4 py-2.5 text-sm focus:border-accent/60 focus:outline-none"
+                className="field"
               />
               <input
                 value={form.icon}
                 onChange={(e) => setForm((f) => ({ ...f, icon: e.target.value }))}
                 placeholder="Icon: emoji, image URL, or simple-icons slug (e.g. plex)"
-                className="rounded-xl border border-white/10 bg-white/5 px-4 py-2.5 text-sm focus:border-accent/60 focus:outline-none"
+                className="field"
               />
 
               {type === "bookmark" && (
@@ -144,7 +144,7 @@ export function ItemModal({ open, onClose, editing, defaultType, defaultCategory
                   onChange={(e) =>
                     setForm((f) => ({ ...f, category_id: e.target.value ? Number(e.target.value) : null }))
                   }
-                  className="rounded-xl border border-white/10 bg-white/5 px-4 py-2.5 text-sm focus:border-accent/60 focus:outline-none"
+                  className="field"
                 >
                   <option value="">No category</option>
                   {categories.map((c) => (
@@ -155,12 +155,12 @@ export function ItemModal({ open, onClose, editing, defaultType, defaultCategory
                 </select>
               )}
 
-              <label className="flex items-center gap-2 text-sm text-slate-400">
+              <label className="flex items-center gap-2 text-sm text-ink-muted">
                 <input
                   type="checkbox"
                   checked={pinned}
                   onChange={(e) => setPinned(e.target.checked)}
-                  className="rounded border-white/20 bg-white/5 accent-accent"
+                  className="rounded hairline sunken accent-accent"
                 />
                 Pin to top
               </label>
@@ -170,14 +170,14 @@ export function ItemModal({ open, onClose, editing, defaultType, defaultCategory
               <button
                 type="button"
                 onClick={onClose}
-                className="rounded-xl px-4 py-2 text-sm text-slate-400 hover:text-white"
+                className="btn-ghost"
               >
                 Cancel
               </button>
               <button
                 type="submit"
                 disabled={saving}
-                className="rounded-xl bg-accent px-4 py-2 text-sm font-medium text-white disabled:opacity-50"
+                className="btn-primary"
               >
                 {saving ? "Saving…" : "Save"}
               </button>

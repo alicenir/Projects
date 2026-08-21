@@ -21,8 +21,8 @@ export function SearchBar({ value, onChange, searchEngine }: Props) {
   }
 
   return (
-    <div className="relative w-full max-w-xl">
-      <span className="pointer-events-none absolute left-4 top-1/2 -translate-y-1/2 text-slate-500">
+    <div className="relative min-w-0 flex-1 lg:w-80 lg:flex-none">
+      <span className="pointer-events-none absolute left-4 top-1/2 -translate-y-1/2 text-ink-muted">
         ⌕
       </span>
       <input
@@ -30,10 +30,10 @@ export function SearchBar({ value, onChange, searchEngine }: Props) {
         value={value}
         onChange={(e) => onChange(e.target.value)}
         onKeyDown={handleKeyDown}
-        placeholder="Search apps, or press Enter to search the web…"
-        className="glass w-full rounded-2xl py-3 pl-11 pr-16 text-sm placeholder:text-slate-500 focus:border-accent/60 focus:outline-none"
+        placeholder="Search or press Enter…"
+        className="glass w-full rounded-xl py-2.5 pl-11 pr-14 text-sm text-ink placeholder:text-ink-muted focus:border-accent/60 focus:outline-none"
       />
-      <kbd className="pointer-events-none absolute right-3 top-1/2 -translate-y-1/2 rounded-md border border-white/10 bg-white/5 px-1.5 py-0.5 text-[10px] text-slate-500">
+      <kbd className="hairline pointer-events-none absolute right-3 top-1/2 -translate-y-1/2 rounded-md border sunken px-1.5 py-0.5 text-[10px] text-ink-muted">
         ⌘K
       </kbd>
     </div>

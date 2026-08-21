@@ -71,11 +71,11 @@ export function CommandPalette({ items, open, onClose }: Props) {
               onChange={(e) => setQuery(e.target.value)}
               onKeyDown={handleKeyDown}
               placeholder="Jump to an app…"
-              className="w-full bg-transparent px-5 py-4 text-base placeholder:text-slate-500 focus:outline-none border-b border-white/10"
+              className="w-full bg-transparent px-5 py-4 text-base placeholder:text-ink-muted focus:outline-none hairline border-b"
             />
             <div className="max-h-80 overflow-y-auto scrollbar-thin p-2">
               {results.length === 0 && (
-                <p className="px-3 py-6 text-center text-sm text-slate-500">No matches</p>
+                <p className="px-3 py-6 text-center text-sm text-ink-muted">No matches</p>
               )}
               {results.map((item, index) => (
                 <button
@@ -83,10 +83,10 @@ export function CommandPalette({ items, open, onClose }: Props) {
                   onClick={() => launch(item)}
                   onMouseEnter={() => setActiveIndex(index)}
                   className={`flex w-full items-center gap-3 rounded-xl px-3 py-2.5 text-left text-sm transition-colors ${
-                    index === activeIndex ? "bg-accent/20 text-accent" : "hover:bg-white/5"
+                    index === activeIndex ? "bg-accent/20 text-accent" : "hover:sunken"
                   }`}
                 >
-                  <div className="flex h-7 w-7 shrink-0 items-center justify-center overflow-hidden rounded-lg bg-white/5">
+                  <div className="flex h-7 w-7 shrink-0 items-center justify-center overflow-hidden rounded-lg sunken">
                     <Icon icon={item.icon} name={item.name} className="h-5 w-5" />
                   </div>
                   <span className="truncate">{item.name}</span>

@@ -14,11 +14,12 @@ import { AppCard } from "./AppCard";
 
 interface Props {
   items: Item[];
+  accent?: string;
   onEdit: (item: Item) => void;
   onAddClick?: () => void;
 }
 
-export function AppGrid({ items, onEdit, onAddClick }: Props) {
+export function AppGrid({ items, accent, onEdit, onAddClick }: Props) {
   const editMode = useStore((s) => s.editMode);
   const upsertItem = useStore((s) => s.upsertItem);
   const removeItem = useStore((s) => s.removeItem);
@@ -51,17 +52,26 @@ export function AppGrid({ items, onEdit, onAddClick }: Props) {
   return (
     <DndContext sensors={sensors} collisionDetection={closestCenter} onDragEnd={handleDragEnd}>
       <SortableContext items={items.map((i) => i.id)} strategy={rectSortingStrategy}>
-        <div className="grid grid-cols-3 gap-3 sm:grid-cols-4 md:grid-cols-6 lg:grid-cols-8">
+        <div className="grid grid-cols-1 gap-2.5 sm:grid-cols-2 lg:grid-cols-3 2xl:grid-cols-4">
           {items.map((item) => (
-            <AppCard key={item.id} item={item} editMode={editMode} onEdit={onEdit} onDelete={handleDelete} />
+            <AppCard
+              key={item.id}
+              item={item}
+              accent={accent}
+              editMode={editMode}
+              onEdit={onEdit}
+              onDelete={handleDelete}
+            />
           ))}
           {editMode && onAddClick && (
             <button
               onClick={onAddClick}
-              className="glass flex flex-col items-center justify-center gap-2 rounded-2xl p-4 border-dashed hover:border-accent/60 hover:text-accent transition-colors"
+              className="hairline flex items-center gap-3 rounded-xl border border-dashed px-3 py-2.5 text-ink-muted transition-colors hover:border-accent/60 hover:text-accent"
             >
-              <div className="flex h-12 w-12 items-center justify-center rounded-xl bg-white/5 text-2xl">+</div>
-              <span className="text-sm font-medium">Add app</span>
+              <span className="flex h-11 w-11 shrink-0 items-center justify-center rounded-lg sunken text-xl">
+                +
+              </span>
+              <span className="text-[13px] font-bold uppercase tracking-wide">Add</span>
             </button>
           )}
         </div>

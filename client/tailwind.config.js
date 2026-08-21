@@ -11,6 +11,10 @@ export default {
           raised: "rgb(var(--surface-raised) / <alpha-value>)",
         },
         canvas: "rgb(var(--base) / <alpha-value>)",
+        ink: {
+          DEFAULT: "rgb(var(--ink) / <alpha-value>)",
+          muted: "rgb(var(--ink-muted) / <alpha-value>)",
+        },
       },
       fontFamily: {
         sans: ["Inter", "system-ui", "sans-serif"],

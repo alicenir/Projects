@@ -121,13 +121,13 @@ export function SettingsPanel({ open, onClose }: { open: boolean; onClose: () =>
             className="glass flex w-full max-w-2xl overflow-hidden rounded-2xl"
             style={{ maxHeight: "80vh" }}
           >
-            <div className="w-40 shrink-0 border-r border-white/10 p-3">
+            <div className="w-40 shrink-0 hairline border-r p-3">
               {TABS.map((t) => (
                 <button
                   key={t}
                   onClick={() => setTab(t)}
                   className={`mb-1 w-full rounded-lg px-3 py-2 text-left text-sm transition-colors ${
-                    tab === t ? "bg-accent/20 text-accent" : "text-slate-400 hover:bg-white/5 hover:text-white"
+                    tab === t ? "bg-accent/20 text-accent" : "text-ink-muted hover:sunken hover:text-ink"
                   }`}
                 >
                   {t}
@@ -139,26 +139,26 @@ export function SettingsPanel({ open, onClose }: { open: boolean; onClose: () =>
               {tab === "General" && (
                 <div className="flex flex-col gap-4">
                   <h2 className="text-lg font-semibold">General</h2>
-                  <label className="text-sm text-slate-400">
+                  <label className="text-sm text-ink-muted">
                     Greeting name
                     <input
                       value={greeting}
                       onChange={(e) => setGreeting(e.target.value)}
                       placeholder="e.g. Nir"
-                      className="mt-1 w-full rounded-xl border border-white/10 bg-white/5 px-3 py-2 text-sm text-white focus:border-accent/60 focus:outline-none"
+                      className="field mt-1"
                     />
                   </label>
-                  <label className="text-sm text-slate-400">
+                  <label className="text-sm text-ink-muted">
                     Web search engine (use %s for the query)
                     <input
                       value={searchEngine}
                       onChange={(e) => setSearchEngine(e.target.value)}
-                      className="mt-1 w-full rounded-xl border border-white/10 bg-white/5 px-3 py-2 text-sm text-white focus:border-accent/60 focus:outline-none"
+                      className="field mt-1"
                     />
                   </label>
                   <button
                     onClick={saveGeneral}
-                    className="ml-auto rounded-xl bg-accent px-4 py-2 text-sm font-medium text-white"
+                    className="btn-primary ml-auto"
                   >
                     Save
                   </button>
@@ -169,7 +169,7 @@ export function SettingsPanel({ open, onClose }: { open: boolean; onClose: () =>
                 <div className="flex flex-col gap-4">
                   <h2 className="text-lg font-semibold">Appearance</h2>
                   <div>
-                    <p className="mb-2 text-sm text-slate-400">Theme</p>
+                    <p className="mb-2 text-sm text-ink-muted">Theme</p>
                     <div className="flex gap-2">
                       {(["dark", "light"] as const).map((t) => (
                         <button
@@ -179,7 +179,7 @@ export function SettingsPanel({ open, onClose }: { open: boolean; onClose: () =>
                             saveAppearance(t, accent);
                           }}
                           className={`rounded-xl border px-4 py-2 text-sm capitalize ${
-                            theme === t ? "border-accent text-accent" : "border-white/10 text-slate-400"
+                            theme === t ? "border-accent text-accent" : "hairline text-ink-muted"
                           }`}
                         >
                           {t}
@@ -188,7 +188,7 @@ export function SettingsPanel({ open, onClose }: { open: boolean; onClose: () =>
                     </div>
                   </div>
                   <div>
-                    <p className="mb-2 text-sm text-slate-400">Accent color</p>
+                    <p className="mb-2 text-sm text-ink-muted">Accent color</p>
                     <div className="flex gap-2">
                       {ACCENTS.map((c) => (
                         <button
@@ -211,39 +211,39 @@ export function SettingsPanel({ open, onClose }: { open: boolean; onClose: () =>
               {tab === "Downloads" && (
                 <div className="flex flex-col gap-4">
                   <h2 className="text-lg font-semibold">SABnzbd</h2>
-                  <p className="text-sm text-slate-400">
+                  <p className="text-sm text-ink-muted">
                     Connect SABnzbd to show live download progress on the dashboard.
                   </p>
-                  <label className="text-sm text-slate-400">
+                  <label className="text-sm text-ink-muted">
                     Server URL
                     <input
                       value={sabUrl}
                       onChange={(e) => setSabUrl(e.target.value)}
                       placeholder="http://sabnzbd.local:8080"
-                      className="mt-1 w-full rounded-xl border border-white/10 bg-white/5 px-3 py-2 text-sm text-white focus:border-accent/60 focus:outline-none"
+                      className="field mt-1"
                     />
                   </label>
-                  <label className="text-sm text-slate-400">
+                  <label className="text-sm text-ink-muted">
                     API key
                     <input
                       type="password"
                       value={sabKey}
                       onChange={(e) => setSabKey(e.target.value)}
                       placeholder={settings.sabnzbd_configured === "true" ? "•••••••• (unchanged)" : "Found in SABnzbd → Config → General"}
-                      className="mt-1 w-full rounded-xl border border-white/10 bg-white/5 px-3 py-2 text-sm text-white focus:border-accent/60 focus:outline-none"
+                      className="field mt-1"
                     />
                   </label>
                   <div className="ml-auto flex gap-2">
                     <button
                       onClick={testSabnzbd}
                       disabled={testing}
-                      className="rounded-xl border border-white/10 px-4 py-2 text-sm text-slate-300 hover:border-accent/60 disabled:opacity-50"
+                      className="btn-outline disabled:opacity-50"
                     >
                       {testing ? "Testing…" : "Test connection"}
                     </button>
                     <button
                       onClick={saveSabnzbd}
-                      className="rounded-xl bg-accent px-4 py-2 text-sm font-medium text-white"
+                      className="btn-primary"
                     >
                       Save
                     </button>
@@ -260,11 +260,11 @@ export function SettingsPanel({ open, onClose }: { open: boolean; onClose: () =>
                       onChange={(e) => setNewCategory(e.target.value)}
                       onKeyDown={(e) => e.key === "Enter" && addCategory()}
                       placeholder="New category name"
-                      className="flex-1 rounded-xl border border-white/10 bg-white/5 px-3 py-2 text-sm text-white focus:border-accent/60 focus:outline-none"
+                      className="field flex-1"
                     />
                     <button
                       onClick={addCategory}
-                      className="rounded-xl bg-accent px-4 py-2 text-sm font-medium text-white"
+                      className="btn-primary"
                     >
                       Add
                     </button>
@@ -273,10 +273,10 @@ export function SettingsPanel({ open, onClose }: { open: boolean; onClose: () =>
                     {categories.map((c) => (
                       <li
                         key={c.id}
-                        className="flex items-center justify-between rounded-xl bg-white/5 px-3 py-2 text-sm"
+                        className="flex items-center justify-between rounded-xl sunken px-3 py-2 text-sm"
                       >
                         {c.name}
-                        <button onClick={() => deleteCategory(c.id)} className="text-slate-500 hover:text-red-400">
+                        <button onClick={() => deleteCategory(c.id)} className="text-ink-muted hover:text-red-400">
                           Delete
                         </button>
                       </li>
@@ -288,7 +288,7 @@ export function SettingsPanel({ open, onClose }: { open: boolean; onClose: () =>
               {tab === "Security" && (
                 <form onSubmit={savePassword} className="flex flex-col gap-4">
                   <h2 className="text-lg font-semibold">Security</h2>
-                  <p className="text-sm text-slate-400">
+                  <p className="text-sm text-ink-muted">
                     Set a password to lock editing behind a login. Leave current password blank on first setup.
                   </p>
                   <input
@@ -296,18 +296,18 @@ export function SettingsPanel({ open, onClose }: { open: boolean; onClose: () =>
                     value={currentPassword}
                     onChange={(e) => setCurrentPassword(e.target.value)}
                     placeholder="Current password"
-                    className="rounded-xl border border-white/10 bg-white/5 px-3 py-2 text-sm text-white focus:border-accent/60 focus:outline-none"
+                    className="field"
                   />
                   <input
                     type="password"
                     value={newPassword}
                     onChange={(e) => setNewPassword(e.target.value)}
                     placeholder="New password"
-                    className="rounded-xl border border-white/10 bg-white/5 px-3 py-2 text-sm text-white focus:border-accent/60 focus:outline-none"
+                    className="field"
                   />
                   <button
                     type="submit"
-                    className="ml-auto rounded-xl bg-accent px-4 py-2 text-sm font-medium text-white"
+                    className="btn-primary ml-auto"
                   >
                     Update password
                   </button>
