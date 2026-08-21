@@ -19,10 +19,15 @@ export interface TeslaSnapshot {
 
   pluggedIn: boolean;
   charging: boolean;
+  chargingState: string | null;
   chargerPower: number | null;
   chargeEnergyAdded: number | null;
   timeToFullCharge: number | null;
   scheduledChargingStart: string | null;
+
+  tirePressures: { fl: number | null; fr: number | null; rl: number | null; rr: number | null };
+  tireWarning: boolean;
+  pressureUnit: string;
 
   odometer: number | null;
   speed: number | null;
@@ -64,10 +69,14 @@ function emptySnapshot(configured: boolean, error?: string): TeslaSnapshot {
     ratedRange: null,
     pluggedIn: false,
     charging: false,
+    chargingState: null,
     chargerPower: null,
     chargeEnergyAdded: null,
     timeToFullCharge: null,
     scheduledChargingStart: null,
+    tirePressures: { fl: null, fr: null, rl: null, rr: null },
+    tireWarning: false,
+    pressureUnit: "psi",
     odometer: null,
     speed: null,
     shiftState: null,
@@ -123,6 +132,23 @@ function num(value: unknown): number | null {
   return typeof n === "number" && Number.isFinite(n) ? n : null;
 }
 
+/** Same as num(), but treats 0 as "no reading" for fields where 0 is a placeholder. */
+function positive(value: unknown): number | null {
+  const n = num(value);
+  return n !== null && n > 0 ? n : null;
+}
+
+/**
+ * TeslaMateApi returns a zero-value timestamp ("0001-01-01T02:20:54+02:20")
+ * rather than null when no charge is scheduled.
+ */
+function realDate(value: unknown): string | null {
+  if (typeof value !== "string" || !value) return null;
+  const time = Date.parse(value);
+  if (Number.isNaN(time)) return null;
+  return new Date(time).getUTCFullYear() < 2000 ? null : value;
+}
+
 export async function getSnapshot(): Promise<TeslaSnapshot> {
   const cfg = config();
   if (!cfg) return emptySnapshot(false);
@@ -142,8 +168,13 @@ export async function getSnapshot(): Promise<TeslaSnapshot> {
     const versions = status.car_versions ?? {};
     const units = status.units ?? {};
 
+    const tpms = status.tpms_details ?? {};
     const state = String(status.state ?? "unknown").toLowerCase();
     const chargerPower = num(charging.charger_power);
+    const chargingState = charging.charging_state
+      ? String(charging.charging_state).toLowerCase()
+      : null;
+    const pluggedIn = Boolean(charging.plugged_in) || chargingState === "charging";
 
     return {
       configured: true,
@@ -156,15 +187,34 @@ export async function getSnapshot(): Promise<TeslaSnapshot> {
       batteryLevel: num(battery.battery_level),
       usableBatteryLevel: num(battery.usable_battery_level),
       chargeLimit: num(charging.charge_limit_soc),
-      estRange: num(battery.est_battery_range),
-      ratedRange: num(battery.rated_battery_range),
+      // A range of 0 means "not reported", not "no range left".
+      estRange: positive(battery.est_battery_range),
+      ratedRange: positive(battery.rated_battery_range),
 
-      pluggedIn: Boolean(charging.plugged_in),
-      charging: state === "charging" || (chargerPower !== null && chargerPower > 0),
+      pluggedIn,
+      charging:
+        chargingState === "charging" ||
+        state === "charging" ||
+        (chargerPower !== null && chargerPower > 0),
+      chargingState,
       chargerPower,
       chargeEnergyAdded: num(charging.charge_energy_added),
       timeToFullCharge: num(charging.time_to_full_charge),
-      scheduledChargingStart: charging.scheduled_charging_start_time ?? null,
+      scheduledChargingStart: realDate(charging.scheduled_charging_start_time),
+
+      tirePressures: {
+        fl: positive(tpms.tpms_pressure_fl),
+        fr: positive(tpms.tpms_pressure_fr),
+        rl: positive(tpms.tpms_pressure_rl),
+        rr: positive(tpms.tpms_pressure_rr),
+      },
+      tireWarning: Boolean(
+        tpms.tpms_soft_warning_fl ||
+          tpms.tpms_soft_warning_fr ||
+          tpms.tpms_soft_warning_rl ||
+          tpms.tpms_soft_warning_rr
+      ),
+      pressureUnit: units.unit_of_pressure ?? "psi",
 
       odometer: num(status.odometer),
       speed: num(driving.speed),

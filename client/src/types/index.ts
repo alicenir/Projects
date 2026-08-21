@@ -108,10 +108,14 @@ export interface TeslaSnapshot {
   ratedRange: number | null;
   pluggedIn: boolean;
   charging: boolean;
+  chargingState: string | null;
   chargerPower: number | null;
   chargeEnergyAdded: number | null;
   timeToFullCharge: number | null;
   scheduledChargingStart: string | null;
+  tirePressures: { fl: number | null; fr: number | null; rl: number | null; rr: number | null };
+  tireWarning: boolean;
+  pressureUnit: string;
   odometer: number | null;
   speed: number | null;
   shiftState: string | null;

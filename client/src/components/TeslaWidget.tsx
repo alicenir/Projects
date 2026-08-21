@@ -32,6 +32,20 @@ function formatHours(hours: number | null): string | null {
   return h > 0 ? `${h}h ${m}m` : `${m}m`;
 }
 
+/** "FL 42.8 · FR 43.1 · RL 42.8 · RR 41.7 psi" for the tyre warning tooltip. */
+function tirePressureLabel(snapshot: TeslaSnapshot): string {
+  const { fl, fr, rl, rr } = snapshot.tirePressures;
+  const parts = [
+    ["FL", fl],
+    ["FR", fr],
+    ["RL", rl],
+    ["RR", rr],
+  ]
+    .filter(([, v]) => v !== null)
+    .map(([k, v]) => `${k} ${(v as number).toFixed(1)}`);
+  return parts.length ? `${parts.join(" · ")} ${snapshot.pressureUnit}` : "";
+}
+
 function Stat({ label, value }: { label: string; value: string }) {
   return (
     <div className="min-w-0">
@@ -202,6 +216,11 @@ export function TeslaWidget() {
             {snapshot.windowsOpen && <span className="text-amber-400">Windows open</span>}
             {snapshot.doorsOpen && <span className="text-amber-400">Doors open</span>}
             {snapshot.updateAvailable && <span className="text-accent">Update available</span>}
+            {snapshot.tireWarning && (
+              <span className="text-amber-400" title={tirePressureLabel(snapshot)}>
+                Tire pressure low
+              </span>
+            )}
             {asleep && snapshot.outsideTemp !== null && (
               <span>
                 Outside {Math.round(snapshot.outsideTemp)}°{snapshot.tempUnit}
@@ -209,7 +228,7 @@ export function TeslaWidget() {
             )}
           </div>
 
-          {authed && snapshot.chargeEnergyAdded ? (
+          {(snapshot.charging || snapshot.pluggedIn) && snapshot.chargeEnergyAdded ? (
             <p className="mt-2 text-[11px] text-ink-muted">
               {snapshot.chargeEnergyAdded} kWh added this session
             </p>
