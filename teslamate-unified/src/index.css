@@ -1,0 +1,99 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+:root {
+  /* Light theme — deliberately designed, not an inverted dark theme. */
+  --background: 246 247 249;
+  --surface: 255 255 255;
+  --surface-raised: 255 255 255;
+  --border: 224 227 232;
+  --ink: 15 18 22;
+  --ink-muted: 100 108 120;
+
+  --drive: 3 130 195;
+  --drive-soft: 214 238 250;
+  --charge: 5 150 105;
+  --charge-soft: 209 244 229;
+  --battery: 194 108 8;
+  --battery-soft: 252 231 200;
+  --efficiency: 147 51 234;
+  --efficiency-soft: 237 220 253;
+  --alert: 220 38 38;
+  --alert-soft: 253 220 220;
+}
+
+@media (prefers-color-scheme: dark) {
+  :root:not([data-theme="light"]) {
+    --background: 11 13 16;
+    --surface: 18 21 26;
+    --surface-raised: 24 28 34;
+    --border: 39 44 52;
+    --ink: 237 240 244;
+    --ink-muted: 148 156 168;
+
+    --drive: 56 189 248;
+    --drive-soft: 15 45 60;
+    --charge: 45 212 145;
+    --charge-soft: 12 46 36;
+    --battery: 251 176 59;
+    --battery-soft: 54 38 12;
+    --efficiency: 192 132 252;
+    --efficiency-soft: 46 22 62;
+    --alert: 251 113 133;
+    --alert-soft: 56 18 24;
+  }
+}
+
+:root[data-theme="dark"] {
+  --background: 11 13 16;
+  --surface: 18 21 26;
+  --surface-raised: 24 28 34;
+  --border: 39 44 52;
+  --ink: 237 240 244;
+  --ink-muted: 148 156 168;
+
+  --drive: 56 189 248;
+  --drive-soft: 15 45 60;
+  --charge: 45 212 145;
+  --charge-soft: 12 46 36;
+  --battery: 251 176 59;
+  --battery-soft: 54 38 12;
+  --efficiency: 192 132 252;
+  --efficiency-soft: 46 22 62;
+  --alert: 251 113 133;
+  --alert-soft: 56 18 24;
+}
+
+* {
+  border-color: rgb(var(--border));
+}
+
+html,
+body,
+#root {
+  height: 100%;
+}
+
+body {
+  background-color: rgb(var(--background));
+  color: rgb(var(--ink));
+  font-family: "Inter", system-ui, sans-serif;
+  font-feature-settings: "cv11", "ss01";
+  -webkit-font-smoothing: antialiased;
+}
+
+.tabular-nums {
+  font-variant-numeric: tabular-nums;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  *,
+  *::before,
+  *::after {
+    animation-duration: 0.001ms !important;
+    animation-iteration-count: 1 !important;
+    transition-duration: 0.001ms !important;
+    scroll-behavior: auto !important;
+  }
+}

@@ -1,0 +1,50 @@
+import { DateRangeProvider } from "@/context/DateRangeContext";
+import { UnitsProvider } from "@/context/UnitsContext";
+import { VehicleProvider, useVehicle } from "@/context/VehicleContext";
+import { TopBar } from "@/components/layout/TopBar";
+import { HeroPanel } from "@/components/hero/HeroPanel";
+import { EmptyState, ErrorState } from "@/components/ui/EmptyState";
+import { Skeleton } from "@/components/ui/Skeleton";
+
+function Dashboard() {
+  const { carId, cars, isLoading, isError } = useVehicle();
+
+  return (
+    <main className="mx-auto flex max-w-[1600px] flex-col gap-6 px-4 py-6 sm:px-6">
+      {isLoading && (
+        <div className="grid gap-4 lg:grid-cols-3">
+          <Skeleton className="h-72 lg:col-span-2" />
+          <Skeleton className="h-72" />
+        </div>
+      )}
+
+      {isError && (
+        <ErrorState message="Couldn't reach TeslaMateAPI. Check TESLAMATE_API_URL and that the proxy is running." />
+      )}
+
+      {!isLoading && !isError && cars.length === 0 && (
+        <EmptyState
+          title="No cars found"
+          description="TeslaMateAPI connected, but /api/v1/cars returned no vehicles yet."
+        />
+      )}
+
+      {carId !== null && <HeroPanel carId={carId} />}
+    </main>
+  );
+}
+
+export default function App() {
+  return (
+    <DateRangeProvider>
+      <UnitsProvider>
+        <VehicleProvider>
+          <div className="min-h-screen bg-background">
+            <TopBar />
+            <Dashboard />
+          </div>
+        </VehicleProvider>
+      </UnitsProvider>
+    </DateRangeProvider>
+  );
+}
