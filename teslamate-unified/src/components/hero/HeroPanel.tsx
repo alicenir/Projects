@@ -1,4 +1,4 @@
-import type { ReactNode } from "react";
+import { lazy, Suspense, type ReactNode } from "react";
 import { formatDistanceToNow } from "date-fns";
 import { DoorOpen, Fan, Lock, ShieldAlert, Thermometer, Unlock } from "lucide-react";
 import { useCarStatus } from "@/api/hooks";
@@ -10,8 +10,12 @@ import { useUnits } from "@/context/UnitsContext";
 import { formatDistance, formatTemp, type LengthUnit, type TempUnit } from "@/lib/units";
 import { cn } from "@/lib/utils";
 import { BatteryRing } from "./BatteryRing";
-import { MiniMap } from "./MiniMap";
 import { StatePill } from "./StatePill";
+
+// maplibre-gl is the single largest dependency in the bundle — split it out
+// of the initial chunk since the map is below-the-fold-ish and not needed
+// for first paint.
+const MiniMap = lazy(() => import("./MiniMap").then((m) => ({ default: m.MiniMap })));
 
 export function HeroPanel({ carId }: { carId: number }) {
   const { data, isLoading, isError, error, refetch } = useCarStatus(carId);
@@ -126,7 +130,9 @@ export function HeroPanel({ carId }: { carId: number }) {
         </div>
 
         <div className={cn("min-h-[140px]", "lg:h-full")}>
-          <MiniMap latitude={geo.location.latitude || geo.latitude || null} longitude={geo.location.longitude || geo.longitude || null} />
+          <Suspense fallback={<Skeleton className="h-full min-h-[140px] w-full" />}>
+            <MiniMap latitude={geo.location.latitude || geo.latitude || null} longitude={geo.location.longitude || geo.longitude || null} />
+          </Suspense>
         </div>
       </div>
     </Card>

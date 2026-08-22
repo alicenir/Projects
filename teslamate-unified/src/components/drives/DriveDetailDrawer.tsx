@@ -1,3 +1,4 @@
+import { lazy, Suspense } from "react";
 import { format } from "date-fns";
 import { useDriveDetail } from "@/api/hooks";
 import { Drawer } from "@/components/ui/Drawer";
@@ -5,8 +6,9 @@ import { ErrorState } from "@/components/ui/EmptyState";
 import { Skeleton } from "@/components/ui/Skeleton";
 import { useUnits } from "@/context/UnitsContext";
 import { displayDistance, formatSpeed, type LengthUnit } from "@/lib/units";
-import { RouteMap } from "./RouteMap";
 import { SyncedDriveCharts } from "./SyncedDriveCharts";
+
+const RouteMap = lazy(() => import("./RouteMap").then((m) => ({ default: m.RouteMap })));
 
 export function DriveDetailDrawer({
   carId,
@@ -38,7 +40,9 @@ export function DriveDetailDrawer({
 
       {data && (
         <div className="flex flex-col gap-5">
-          <RouteMap points={data.data.drive.drive_details} />
+          <Suspense fallback={<Skeleton className="h-full min-h-[220px] w-full" />}>
+            <RouteMap points={data.data.drive.drive_details} />
+          </Suspense>
 
           <div className="grid grid-cols-2 gap-3 sm:grid-cols-4">
             <Stat label="Distance" value={`${displayDistance(data.data.drive.odometer_details.odometer_distance, data.data.units.unit_of_length as LengthUnit, system).toFixed(1)} ${system === "imperial" ? "mi" : "km"}`} />

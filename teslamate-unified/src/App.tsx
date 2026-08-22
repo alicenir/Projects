@@ -1,3 +1,4 @@
+import { lazy, Suspense } from "react";
 import { DateRangeProvider } from "@/context/DateRangeContext";
 import { UnitsProvider } from "@/context/UnitsContext";
 import { VehicleProvider, useVehicle } from "@/context/VehicleContext";
@@ -8,11 +9,12 @@ import { DrivesSection } from "@/components/drives/DrivesSection";
 import { ChargingSection } from "@/components/charging/ChargingSection";
 import { BatteryHealthSection } from "@/components/battery/BatteryHealthSection";
 import { TrendsSection } from "@/components/trends/TrendsSection";
-import { FullMapView } from "@/components/map/FullMapView";
 import { UpdatesSection } from "@/components/updates/UpdatesSection";
 import { useDateRange } from "@/context/DateRangeContext";
 import { EmptyState, ErrorState } from "@/components/ui/EmptyState";
 import { Skeleton } from "@/components/ui/Skeleton";
+
+const FullMapView = lazy(() => import("@/components/map/FullMapView").then((m) => ({ default: m.FullMapView })));
 
 function Dashboard() {
   const { carId, cars, isLoading, isError } = useVehicle();
@@ -46,7 +48,9 @@ function Dashboard() {
           <ChargingSection carId={carId} />
           <BatteryHealthSection carId={carId} />
           <TrendsSection carId={carId} />
-          <FullMapView carId={carId} range={{ startDate, endDate }} />
+          <Suspense fallback={<Skeleton className="h-[420px]" />}>
+            <FullMapView carId={carId} range={{ startDate, endDate }} />
+          </Suspense>
           <UpdatesSection carId={carId} />
         </>
       )}
