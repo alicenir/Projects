@@ -2,6 +2,8 @@ import { useEffect, useState } from "react";
 import { AddMediaModal } from "./components/AddMediaModal";
 import { AppGrid } from "./components/AppGrid";
 import { NowPlayingWidget } from "./components/NowPlayingWidget";
+import { PortainerWidget } from "./components/PortainerWidget";
+import { ProwlarrWidget } from "./components/ProwlarrWidget";
 import { UpcomingSection } from "./components/UpcomingSection";
 import { WeatherWidget } from "./components/WeatherWidget";
 import { BookmarksSection } from "./components/BookmarksSection";
@@ -128,6 +130,8 @@ export default function App() {
           <NowPlayingWidget />
           <TeslaWidget />
           <WeatherWidget />
+          <ProwlarrWidget />
+          <PortainerWidget />
         </section>
 
         <MediaSection

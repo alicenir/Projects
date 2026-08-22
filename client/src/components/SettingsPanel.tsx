@@ -6,7 +6,7 @@ import { useStore } from "../store/useStore";
 import type { GeocodeResult } from "../types";
 
 const ACCENTS = ["#7c5cff", "#22c55e", "#f97316", "#ef4444", "#06b6d4", "#ec4899"];
-const TABS = ["General", "Appearance", "Weather", "Downloads", "Media", "Plex", "Car", "Categories", "Security"] as const;
+const TABS = ["General", "Appearance", "Weather", "Downloads", "Media", "Indexers", "Plex", "Docker", "Car", "Categories", "Security"] as const;
 
 type TabName = (typeof TABS)[number];
 
@@ -47,6 +47,11 @@ export function SettingsPanel({
   const [testingArr, setTestingArr] = useState<"sonarr" | "radarr" | null>(null);
   const [tesla, setTesla] = useState({ url: "", token: "", carId: "1" });
   const [plex, setPlex] = useState({ url: "", apiKey: "" });
+  const [prowlarr, setProwlarr] = useState({ url: "", apiKey: "" });
+  const [testingProwlarr, setTestingProwlarr] = useState(false);
+  const [portainer, setPortainer] = useState({ url: "", apiKey: "", endpointId: "1" });
+  const [testingPortainer, setTestingPortainer] = useState(false);
+  const [endpoints, setEndpoints] = useState<{ id: number; name: string; status: string }[]>([]);
   const [testingPlex, setTestingPlex] = useState(false);
   const [placeQuery, setPlaceQuery] = useState("");
   const [places, setPlaces] = useState<GeocodeResult[]>([]);
@@ -68,6 +73,12 @@ export function SettingsPanel({
     setAccent(settings.accent_color ?? "#7c5cff");
     setSabUrl(settings.sabnzbd_url ?? "");
     setPlex({ url: settings.tautulli_url ?? "", apiKey: "" });
+    setProwlarr({ url: settings.prowlarr_url ?? "", apiKey: "" });
+    setPortainer({
+      url: settings.portainer_url ?? "",
+      apiKey: "",
+      endpointId: settings.portainer_endpoint_id ?? "1",
+    });
     setPlaceQuery(settings.weather_label ?? "");
     setTesla({
       url: settings.teslamate_url ?? "",
@@ -192,6 +203,82 @@ export function SettingsPanel({
   async function saveWeatherUnits(units: "metric" | "imperial") {
     await api.put("/settings", { weather_units: units });
     setSettings({ ...settings!, weather_units: units });
+  }
+
+  async function testProwlarr() {
+    if (!prowlarr.url || !prowlarr.apiKey) return toast.error("Enter URL and API key");
+    setTestingProwlarr(true);
+    try {
+      const result = await api.post<{ ok: boolean; error?: string; version?: string }>(
+        "/settings/prowlarr/test",
+        { url: prowlarr.url, apiKey: prowlarr.apiKey }
+      );
+      if (result.ok) toast.success(`Connected (Prowlarr ${result.version ?? ""})`);
+      else toast.error(result.error ?? "Connection failed");
+    } catch (err) {
+      toast.error(err instanceof Error ? err.message : "Connection failed");
+    } finally {
+      setTestingProwlarr(false);
+    }
+  }
+
+  async function saveProwlarr() {
+    const payload: Record<string, string> = { prowlarr_url: prowlarr.url };
+    if (prowlarr.apiKey) payload.prowlarr_api_key = prowlarr.apiKey;
+    await api.put("/settings", payload);
+    setSettings({
+      ...settings!,
+      prowlarr_url: prowlarr.url,
+      prowlarr_configured: String(
+        Boolean(prowlarr.url && (prowlarr.apiKey || settings!.prowlarr_configured === "true"))
+      ),
+    });
+    setProwlarr((s) => ({ ...s, apiKey: "" }));
+    toast.success("Prowlarr saved");
+  }
+
+  async function testPortainer() {
+    if (!portainer.url || !portainer.apiKey) return toast.error("Enter URL and API key");
+    setTestingPortainer(true);
+    try {
+      const result = await api.post<{
+        ok: boolean;
+        error?: string;
+        endpoints?: { id: number; name: string; status: string }[];
+      }>("/portainer/endpoints", { url: portainer.url, apiKey: portainer.apiKey });
+      if (!result.ok) {
+        toast.error(result.error ?? "Connection failed");
+      } else {
+        setEndpoints(result.endpoints ?? []);
+        if (result.endpoints?.length && !result.endpoints.some((e) => String(e.id) === portainer.endpointId)) {
+          setPortainer((s) => ({ ...s, endpointId: String(result.endpoints![0].id) }));
+        }
+        toast.success(`Found ${result.endpoints?.length ?? 0} environment(s)`);
+      }
+    } catch (err) {
+      toast.error(err instanceof Error ? err.message : "Connection failed");
+    } finally {
+      setTestingPortainer(false);
+    }
+  }
+
+  async function savePortainer() {
+    const payload: Record<string, string> = {
+      portainer_url: portainer.url,
+      portainer_endpoint_id: portainer.endpointId || "1",
+    };
+    if (portainer.apiKey) payload.portainer_api_key = portainer.apiKey;
+    await api.put("/settings", payload);
+    setSettings({
+      ...settings!,
+      portainer_url: portainer.url,
+      portainer_endpoint_id: portainer.endpointId || "1",
+      portainer_configured: String(
+        Boolean(portainer.url && (portainer.apiKey || settings!.portainer_configured === "true"))
+      ),
+    });
+    setPortainer((s) => ({ ...s, apiKey: "" }));
+    toast.success("Portainer saved");
   }
 
   async function testPlex() {
@@ -536,6 +623,121 @@ export function SettingsPanel({
                       {testingPlex ? "Testing…" : "Test"}
                     </button>
                     <button onClick={savePlex} className="btn-primary">
+                      Save
+                    </button>
+                  </div>
+                </div>
+              )}
+
+              {tab === "Indexers" && (
+                <div className="flex flex-col gap-4">
+                  <div>
+                    <h2 className="text-lg font-semibold">Indexers</h2>
+                    <p className="mt-1 text-sm text-ink-muted">
+                      Connect Prowlarr to show which indexers are currently blocked or failing.
+                    </p>
+                  </div>
+                  <label className="text-sm text-ink-muted">
+                    Prowlarr URL
+                    <input
+                      value={prowlarr.url}
+                      onChange={(e) => setProwlarr((s) => ({ ...s, url: e.target.value }))}
+                      placeholder="http://prowlarr.local:9696"
+                      className="field mt-1"
+                    />
+                  </label>
+                  <label className="text-sm text-ink-muted">
+                    API key (Prowlarr → Settings → General)
+                    <input
+                      type="password"
+                      value={prowlarr.apiKey}
+                      onChange={(e) => setProwlarr((s) => ({ ...s, apiKey: e.target.value }))}
+                      placeholder={
+                        settings.prowlarr_configured === "true" ? "•••••••• (unchanged)" : "API key"
+                      }
+                      className="field mt-1"
+                    />
+                  </label>
+                  <div className="ml-auto flex gap-2">
+                    <button
+                      onClick={testProwlarr}
+                      disabled={testingProwlarr}
+                      className="btn-outline disabled:opacity-50"
+                    >
+                      {testingProwlarr ? "Testing…" : "Test"}
+                    </button>
+                    <button onClick={saveProwlarr} className="btn-primary">
+                      Save
+                    </button>
+                  </div>
+                </div>
+              )}
+
+              {tab === "Docker" && (
+                <div className="flex flex-col gap-4">
+                  <div>
+                    <h2 className="text-lg font-semibold">Docker (via Portainer)</h2>
+                    <p className="mt-1 text-sm text-ink-muted">
+                      Shows live container status by reading Portainer's Docker proxy — no direct
+                      access to the host is needed. Create an API token under your Portainer user
+                      settings → Access tokens.
+                    </p>
+                  </div>
+                  <label className="text-sm text-ink-muted">
+                    Portainer URL
+                    <input
+                      value={portainer.url}
+                      onChange={(e) => setPortainer((s) => ({ ...s, url: e.target.value }))}
+                      placeholder="http://portainer.local:9000"
+                      className="field mt-1"
+                    />
+                  </label>
+                  <label className="text-sm text-ink-muted">
+                    API token
+                    <input
+                      type="password"
+                      value={portainer.apiKey}
+                      onChange={(e) => setPortainer((s) => ({ ...s, apiKey: e.target.value }))}
+                      placeholder={
+                        settings.portainer_configured === "true" ? "•••••••• (unchanged)" : "Access token"
+                      }
+                      className="field mt-1"
+                    />
+                  </label>
+
+                  <label className="text-sm text-ink-muted">
+                    Environment
+                    {endpoints.length > 0 ? (
+                      <select
+                        value={portainer.endpointId}
+                        onChange={(e) => setPortainer((s) => ({ ...s, endpointId: e.target.value }))}
+                        className="field mt-1"
+                      >
+                        {endpoints.map((e) => (
+                          <option key={e.id} value={String(e.id)}>
+                            {e.name} (id {e.id}) {e.status === "down" ? "— unreachable" : ""}
+                          </option>
+                        ))}
+                      </select>
+                    ) : (
+                      <input
+                        value={portainer.endpointId}
+                        onChange={(e) => setPortainer((s) => ({ ...s, endpointId: e.target.value }))}
+                        placeholder="1"
+                        className="field mt-1"
+                      />
+                    )}
+                  </label>
+
+                  <div className="ml-auto flex gap-2">
+                    <button
+                      onClick={testPortainer}
+                      disabled={testingPortainer}
+                      className="btn-outline disabled:opacity-50"
+                    >
+                      {testingPortainer ? "Testing…" : "Test & list environments"}
+                    </button>
+                    <button onClick={savePortainer} className="btn-primary">
                       Save
                     </button>
                   </div>

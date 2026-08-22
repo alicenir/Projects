@@ -1,7 +1,8 @@
 # Homebase
 
 A self-hosted startpage / dashboard, in the spirit of [Flame](https://hub.docker.com/r/pawelmalak/flame), with a
-modern UI, live SABnzbd downloads, and a Sonarr/Radarr "recently added" media row built in.
+modern UI, live SABnzbd downloads, a Sonarr/Radarr "recently added" media row, and live status for your
+Tesla, Plex, Prowlarr indexers and Docker containers built in.
 
 ## Features
 
@@ -34,6 +35,10 @@ modern UI, live SABnzbd downloads, and a Sonarr/Radarr "recently added" media ro
   wants credentials.
 - **Live SABnzbd widget** — real-time queue with per-item progress bars, speed, ETA, and pause/resume/remove
   controls, pushed to the browser over WebSockets (no page refresh, no polling on the client).
+- **Indexer status** — Prowlarr's indexer health at a glance: which indexers are blocked (with a "back in
+  Nm" countdown from `disabledTill`), and any system health warnings/errors Prowlarr is reporting.
+- **Container status** — which Docker containers on your host are running vs. exited/restarting/dead, via
+  Portainer's API. No SSH or host-level Docker socket access needed — just a Portainer API token.
 - **Theming** — dark/light mode and a configurable accent color.
 - **Optional password lock** — editing (adding/removing apps, changing settings) can be locked behind a
   password; browsing the dashboard itself is always open.
@@ -77,6 +82,17 @@ SABnzbd's JSON API (`/api?mode=queue` / `mode=history`) on an adaptive interval 
 is actively downloading, every 8s when idle — and broadcasts snapshots to all connected clients over
 Socket.IO.
 
+The indexer widget reads Prowlarr's `/api/v1/indexer`, `/api/v1/indexerstatus` and `/api/v1/health`
+endpoints server-side and polls every 5 minutes (indexer health doesn't change second to second). A
+blocked indexer's countdown is computed from `disabledTill` on each poll rather than trusted as a fixed
+value, so it stays accurate between refreshes.
+
+The container widget doesn't talk to Docker directly — it goes through Portainer's API
+(`/api/endpoints/:id/docker/containers/json`), which proxies the Docker Engine API for whichever
+environment you pick in Settings. That means no Docker socket needs to be mounted into Homebase and no
+SSH access to the NAS is required, just a Portainer personal access token scoped to read access. Polled
+every 60s.
+
 ## Running locally (development)
 
 ```bash
@@ -119,7 +135,13 @@ volume.
    **Test & list cars** to discover your vehicles, pick one, and save.
 8. Optionally set your city under **Settings → Weather**, and connect Tautulli under
    **Settings → Plex** for the now-playing widget.
-9. Optionally set a password under **Settings → Security** to lock editing.
+9. Optionally connect Prowlarr under **Settings → Indexers** (URL + API key, found in Prowlarr under
+   *Settings → General*) for indexer health.
+10. Optionally connect Portainer under **Settings → Docker** — enter its URL and an
+    [API token](https://docs.portainer.io/api/access) (Portainer → your user → **Access tokens**), hit
+    **Test & list environments**, and pick the environment your containers run under (usually `1` for
+    local Docker on the NAS itself).
+11. Optionally set a password under **Settings → Security** to lock editing.
 
 ## Configuration reference
 
@@ -140,12 +162,8 @@ The SABnzbd widget is built on a small, self-contained service module
 (`server/src/services/sabnzbd.ts`) specifically so more *arr-stack integrations can be added the same way
 without touching the rest of the app. Natural next steps:
 
-- **More live widgets**: qBittorrent/Transmission (torrent queue alongside the Usenet one),
-  Plex/Jellyfin (now playing), Overseerr/Ombi (pending requests), Uptime Kuma (service health dots on
-  each app card), and an *upcoming* calendar from Sonarr to sit alongside "Recently added".
+- **More live widgets**: Overseerr/Ombi (pending requests), a torrent client alongside the Usenet one.
 - **Host stats widget**: CPU/RAM/disk/network via a tiny agent, shown as sparklines in the sidebar.
-- **Per-app health check**: ping each app's URL and show a green/red dot on its icon, so you know at a
-  glance what's down.
 - **Multi-user profiles**: separate dashboards/layouts per household member, each with their own pinned
   apps.
 - **Notifications**: desktop/browser push when a SABnzbd job completes or fails, or a monitored service

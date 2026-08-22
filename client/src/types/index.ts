@@ -244,3 +244,53 @@ export interface UpcomingSnapshot {
   items: UpcomingItem[];
   error?: string;
 }
+
+export interface IndexerStatus {
+  id: number;
+  name: string;
+  protocol: "usenet" | "torrent" | "unknown";
+  enabled: boolean;
+  blocked: boolean;
+  disabledTill: string | null;
+  failureReason: string | null;
+}
+
+export interface ProwlarrIssue {
+  type: "warning" | "error";
+  message: string;
+}
+
+export interface ProwlarrSnapshot {
+  configured: boolean;
+  reachable: boolean;
+  error?: string;
+  total: number;
+  enabled: number;
+  healthy: number;
+  indexers: IndexerStatus[];
+  issues: ProwlarrIssue[];
+}
+
+export interface ContainerStatus {
+  id: string;
+  name: string;
+  image: string;
+  state: string;
+  status: string;
+  stack: string | null;
+}
+
+export interface PortainerSnapshot {
+  configured: boolean;
+  reachable: boolean;
+  error?: string;
+  total: number;
+  running: number;
+  problem: ContainerStatus[];
+}
+
+export interface PortainerEndpoint {
+  id: number;
+  name: string;
+  status: "up" | "down";
+}

@@ -57,6 +57,11 @@ const defaultSettings: Record<string, string> = {
   weather_longitude: "",
   weather_label: "",
   weather_units: "metric",
+  prowlarr_url: "",
+  prowlarr_api_key: "",
+  portainer_url: "",
+  portainer_api_key: "",
+  portainer_endpoint_id: "1",
 };
 
 const insertSetting = db.prepare(

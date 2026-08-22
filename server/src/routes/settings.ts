@@ -7,11 +7,12 @@ import { invalidateMediaCache, testArrConnection } from "../services/arr.js";
 import { testConnection as testTeslaConnection } from "../services/teslamate.js";
 import { testConnection as testTautulliConnection } from "../services/tautulli.js";
 import { invalidateWeatherCache } from "../services/weather.js";
+import { testConnection as testProwlarrConnection } from "../services/prowlarr.js";
 
 export const settingsRouter = Router();
 
-const SECRET_KEYS = ["password_hash", "sabnzbd_api_key", "sonarr_api_key", "radarr_api_key", "teslamate_api_token", "tautulli_api_key"];
-const URL_KEYS = ["sabnzbd_url", "sonarr_url", "radarr_url", "teslamate_url", "tautulli_url"];
+const SECRET_KEYS = ["password_hash", "sabnzbd_api_key", "sonarr_api_key", "radarr_api_key", "teslamate_api_token", "tautulli_api_key", "prowlarr_api_key", "portainer_api_key"];
+const URL_KEYS = ["sabnzbd_url", "sonarr_url", "radarr_url", "teslamate_url", "tautulli_url", "prowlarr_url", "portainer_url"];
 
 settingsRouter.get("/", (req, res) => {
   const all = getAllSettings();
@@ -29,6 +30,8 @@ settingsRouter.get("/", (req, res) => {
   visible.teslamate_configured = String(Boolean(all.teslamate_url));
   visible.tautulli_configured = String(Boolean(all.tautulli_url && all.tautulli_api_key));
   visible.weather_configured = String(Boolean(all.weather_latitude && all.weather_longitude));
+  visible.prowlarr_configured = String(Boolean(all.prowlarr_url && all.prowlarr_api_key));
+  visible.portainer_configured = String(Boolean(all.portainer_url && all.portainer_api_key));
   if (!authed) {
     for (const key of URL_KEYS) delete visible[key];
   }
@@ -72,6 +75,13 @@ settingsRouter.post("/tautulli/test", requireAuth, async (req, res) => {
   const parsed = testSchema.safeParse(req.body);
   if (!parsed.success) return res.status(400).json({ error: "URL and API key required" });
   const result = await testTautulliConnection(parsed.data.url, parsed.data.apiKey);
+  res.json(result);
+});
+
+settingsRouter.post("/prowlarr/test", requireAuth, async (req, res) => {
+  const parsed = testSchema.safeParse(req.body);
+  if (!parsed.success) return res.status(400).json({ error: "URL and API key required" });
+  const result = await testProwlarrConnection(parsed.data.url, parsed.data.apiKey);
   res.json(result);
 });
 
