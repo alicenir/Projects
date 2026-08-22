@@ -1,6 +1,8 @@
 import { createContext, useContext, useMemo, useState, type ReactNode } from "react";
 import { formatISO, startOfDay, startOfYear, subDays } from "date-fns";
 
+const PRESET_DAYS: Partial<Record<DateRangePreset, number>> = { "7d": 7, "30d": 30, "90d": 90 };
+
 export type DateRangePreset = "7d" | "30d" | "90d" | "ytd" | "all";
 
 export const PRESET_LABELS: Record<DateRangePreset, string> = {
@@ -17,6 +19,8 @@ interface DateRangeContextValue {
   /** RFC3339 start, or undefined for "all". Passed straight through to the API's startDate/endDate query params. */
   startDate?: string;
   endDate?: string;
+  /** The immediately preceding period of equal length, for period-over-period deltas. Undefined for "ytd"/"all", which don't have a natural equal-length prior period. */
+  previousRange?: { startDate: string; endDate: string };
 }
 
 const DateRangeContext = createContext<DateRangeContextValue | null>(null);
@@ -37,9 +41,22 @@ function rangeFor(preset: DateRangePreset): { startDate?: string; endDate?: stri
   }
 }
 
+function previousRangeFor(preset: DateRangePreset): { startDate: string; endDate: string } | undefined {
+  const days = PRESET_DAYS[preset];
+  if (!days) return undefined;
+  const now = new Date();
+  return {
+    startDate: formatISO(startOfDay(subDays(now, days * 2))),
+    endDate: formatISO(startOfDay(subDays(now, days))),
+  };
+}
+
 export function DateRangeProvider({ children }: { children: ReactNode }) {
   const [preset, setPreset] = useState<DateRangePreset>("30d");
-  const value = useMemo(() => ({ preset, setPreset, ...rangeFor(preset) }), [preset]);
+  const value = useMemo(
+    () => ({ preset, setPreset, ...rangeFor(preset), previousRange: previousRangeFor(preset) }),
+    [preset]
+  );
   return <DateRangeContext.Provider value={value}>{children}</DateRangeContext.Provider>;
 }
 

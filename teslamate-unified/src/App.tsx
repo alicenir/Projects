@@ -3,6 +3,7 @@ import { UnitsProvider } from "@/context/UnitsContext";
 import { VehicleProvider, useVehicle } from "@/context/VehicleContext";
 import { TopBar } from "@/components/layout/TopBar";
 import { HeroPanel } from "@/components/hero/HeroPanel";
+import { KpiStrip } from "@/components/kpi/KpiStrip";
 import { EmptyState, ErrorState } from "@/components/ui/EmptyState";
 import { Skeleton } from "@/components/ui/Skeleton";
 
@@ -29,7 +30,12 @@ function Dashboard() {
         />
       )}
 
-      {carId !== null && <HeroPanel carId={carId} />}
+      {carId !== null && (
+        <>
+          <HeroPanel carId={carId} />
+          <KpiStrip />
+        </>
+      )}
     </main>
   );
 }

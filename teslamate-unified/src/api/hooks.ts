@@ -111,6 +111,51 @@ export function useUpdates(carId: number | null) {
   });
 }
 
+const AGGREGATE_PAGE_SIZE = 100;
+const AGGREGATE_MAX_PAGES = 20; // caps a single range fetch at 2,000 records
+
+/**
+ * KPI/trend sections need the *full* period to sum correctly, not a page of
+ * it — but "never a giant single fetch" still applies, so this walks pages
+ * of AGGREGATE_PAGE_SIZE sequentially (capped) instead of one huge request.
+ * Cached as a whole under one query key, distinct from the paged list view.
+ */
+export function useDrivesForRange(carId: number | null, range: DateRangeParams) {
+  return useQuery({
+    queryKey: ["drives-range", carId, range],
+    queryFn: async () => {
+      const drives = [];
+      let unitOfLength = "km";
+      for (let page = 1; page <= AGGREGATE_MAX_PAGES; page++) {
+        const res = await api.drives(carId as number, { ...range, page, show: AGGREGATE_PAGE_SIZE });
+        drives.push(...res.data.drives);
+        unitOfLength = res.data.units.unit_of_length;
+        if (res.data.drives.length < AGGREGATE_PAGE_SIZE) break;
+      }
+      return { drives, unitOfLength };
+    },
+    enabled: carId !== null,
+    staleTime: 60_000,
+  });
+}
+
+export function useChargesForRange(carId: number | null, range: DateRangeParams) {
+  return useQuery({
+    queryKey: ["charges-range", carId, range],
+    queryFn: async () => {
+      const charges = [];
+      for (let page = 1; page <= AGGREGATE_MAX_PAGES; page++) {
+        const res = await api.charges(carId as number, { ...range, page, show: AGGREGATE_PAGE_SIZE });
+        charges.push(...res.data.charges);
+        if (res.data.charges.length < AGGREGATE_PAGE_SIZE) break;
+      }
+      return charges;
+    },
+    enabled: carId !== null,
+    staleTime: 60_000,
+  });
+}
+
 export function useGlobalSettings() {
   return useQuery({
     queryKey: ["globalsettings"],
