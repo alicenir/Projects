@@ -1,0 +1,18 @@
+services:
+  teslamate-unified:
+    image: teslamate-unified:latest
+    build: .
+    pull_policy: build
+    container_name: teslamate-unified
+    restart: unless-stopped
+    ports:
+      - "8090:80"
+    environment:
+      # No trailing slash, no /api suffix.
+      - TESLAMATE_API_URL=http://192.168.50.8:8080
+      # Leave blank if TeslaMateApi has API_TOKEN_DISABLE=true.
+      - API_TOKEN=
+
+# No named volumes: this app has no backend and no database of its own —
+# everything comes from TeslaMateApi on every request, so there's nothing
+# here to persist between container restarts.
