@@ -5,6 +5,7 @@ import { TopBar } from "@/components/layout/TopBar";
 import { HeroPanel } from "@/components/hero/HeroPanel";
 import { KpiStrip } from "@/components/kpi/KpiStrip";
 import { DrivesSection } from "@/components/drives/DrivesSection";
+import { ChargingSection } from "@/components/charging/ChargingSection";
 import { EmptyState, ErrorState } from "@/components/ui/EmptyState";
 import { Skeleton } from "@/components/ui/Skeleton";
 
@@ -36,6 +37,7 @@ function Dashboard() {
           <HeroPanel carId={carId} />
           <KpiStrip />
           <DrivesSection carId={carId} />
+          <ChargingSection carId={carId} />
         </>
       )}
     </main>
