@@ -268,7 +268,11 @@ export function MediaSection({ onConfigure }: { onConfigure?: () => void }) {
         </p>
       )}
 
-      <div className="grid grid-cols-3 gap-3 sm:grid-cols-4 lg:grid-cols-6 2xl:grid-cols-8">
+      {/* Fixed column counts made each poster grow with the window — on a wide
+          screen they became far larger than a poster needs to be. auto-fill
+          pins the poster size instead and lets the count vary with width.
+          Phones keep three across. */}
+      <div className="grid grid-cols-3 gap-3 sm:grid-cols-[repeat(auto-fill,minmax(150px,1fr))]">
         {snapshot.items.map((item) => (
           <MediaCard key={item.id} item={item} onOpen={setSelected} />
         ))}
