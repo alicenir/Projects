@@ -8,11 +8,15 @@ import { DrivesSection } from "@/components/drives/DrivesSection";
 import { ChargingSection } from "@/components/charging/ChargingSection";
 import { BatteryHealthSection } from "@/components/battery/BatteryHealthSection";
 import { TrendsSection } from "@/components/trends/TrendsSection";
+import { FullMapView } from "@/components/map/FullMapView";
+import { UpdatesSection } from "@/components/updates/UpdatesSection";
+import { useDateRange } from "@/context/DateRangeContext";
 import { EmptyState, ErrorState } from "@/components/ui/EmptyState";
 import { Skeleton } from "@/components/ui/Skeleton";
 
 function Dashboard() {
   const { carId, cars, isLoading, isError } = useVehicle();
+  const { startDate, endDate } = useDateRange();
 
   return (
     <main className="mx-auto flex max-w-[1600px] flex-col gap-6 px-4 py-6 sm:px-6">
@@ -42,6 +46,8 @@ function Dashboard() {
           <ChargingSection carId={carId} />
           <BatteryHealthSection carId={carId} />
           <TrendsSection carId={carId} />
+          <FullMapView carId={carId} range={{ startDate, endDate }} />
+          <UpdatesSection carId={carId} />
         </>
       )}
     </main>
