@@ -1,6 +1,5 @@
 import { useEffect, useRef } from "react";
 import maplibregl from "maplibre-gl";
-import "maplibre-gl/dist/maplibre-gl.css";
 
 // OpenFreeMap — free, keyless vector tiles. No Google Maps, no API key.
 const STYLE_URL = "https://tiles.openfreemap.org/styles/liberty";
@@ -54,5 +53,5 @@ export function MiniMap({ latitude, longitude }: { latitude: number | null; long
     );
   }
 
-  return <div ref={containerRef} className="h-full min-h-[140px] w-full overflow-hidden rounded-xl" />;
+  return <div ref={containerRef} className="relative h-full min-h-[140px] w-full overflow-hidden rounded-xl" />;
 }

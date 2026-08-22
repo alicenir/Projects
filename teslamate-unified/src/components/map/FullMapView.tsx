@@ -1,7 +1,6 @@
 import { useEffect, useMemo, useRef, useState } from "react";
 import { useQueries } from "@tanstack/react-query";
 import maplibregl from "maplibre-gl";
-import "maplibre-gl/dist/maplibre-gl.css";
 import { api } from "@/api/client";
 import type { DateRangeParams } from "@/api/client";
 import { useChargesForRange, useDrivesForRange } from "@/api/hooks";
@@ -211,8 +210,20 @@ export function FullMapView({ carId, range }: { carId: number; range: DateRangeP
         </div>
       </CardHeader>
       <CardContent>
-        {isLoading && <Skeleton className="h-[420px]" />}
-        <div ref={containerRef} className={cn("h-[420px] w-full overflow-hidden rounded-xl", isLoading && "hidden")} />
+        {/*
+          The map container's className must never change after mount:
+          MapLibre appends its own "maplibregl-map" class to this element
+          directly via the DOM, and if React re-sets `className` on a later
+          render (which it does whenever the prop string differs from the
+          previous render), that DOM mutation gets wiped, silently breaking
+          MapLibre's own CSS containment. So the loading state is layered
+          on top as an absolutely-positioned sibling instead of toggling a
+          class on this div.
+        */}
+        <div className="relative h-[420px] w-full">
+          <div ref={containerRef} className="relative h-full w-full overflow-hidden rounded-xl" />
+          {isLoading && <Skeleton className="absolute inset-0 h-full w-full" />}
+        </div>
         {recentDriveIds.length === MAX_ROUTES && (
           <p className="mt-2 text-[11px] text-ink-muted">
             Showing routes for the {MAX_ROUTES} most recent drives in range (capped to limit detail requests).

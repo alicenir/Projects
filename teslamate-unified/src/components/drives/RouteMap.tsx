@@ -1,6 +1,5 @@
 import { useEffect, useRef } from "react";
 import maplibregl from "maplibre-gl";
-import "maplibre-gl/dist/maplibre-gl.css";
 import type { DriveDetailPoint } from "@/api/schemas";
 
 const STYLE_URL = "https://tiles.openfreemap.org/styles/liberty";
@@ -94,5 +93,5 @@ export function RouteMap({ points }: { points: DriveDetailPoint[] }) {
     );
   }
 
-  return <div ref={containerRef} className="h-full min-h-[220px] w-full overflow-hidden rounded-xl" />;
+  return <div ref={containerRef} className="relative h-full min-h-[220px] w-full overflow-hidden rounded-xl" />;
 }
