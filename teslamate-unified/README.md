@@ -72,10 +72,17 @@ stack or reach it over the LAN.
 
 ## Deploying via Portainer
 
-1. In Portainer, go to **Stacks → Add stack**.
-2. Choose **Repository** and point it at this repo, with **Reference** set to this branch and
-   **Compose path** set to `teslamate-unified/docker-compose.yml` (or paste the contents of
-   `docker-compose.yml` directly under **Web editor** if you'd rather not link the repo).
+1. In Portainer, go to **Stacks → Add stack**, and choose **Repository** as the build method.
+2. Fill in the Git repository fields:
+   - **Repository URL**: `https://github.com/alicenir/Projects`
+   - **Repository reference**: `refs/heads/claude/teslamate-unified-project-z82b8e` while this is
+     still on its feature branch, or `refs/heads/main` once it's merged (either works — Portainer
+     needs the full `refs/heads/<branch>` form, not just the branch name).
+   - **Compose path**: `teslamate-unified/docker-compose.yml` — this repo has more than one app in
+     it, so the compose file isn't at the repo root.
+
+   (Alternatively, skip the repo link entirely: pick **Web editor** and paste in the contents of
+   `teslamate-unified/docker-compose.yml` directly.)
 3. Under **Environment variables**, set:
    - `TESLAMATE_API_URL` — your TeslaMateApi URL, e.g. `http://192.168.50.8:8080` (no trailing
      slash, no `/api` suffix). If TeslaMateApi runs as another container on the same Docker
