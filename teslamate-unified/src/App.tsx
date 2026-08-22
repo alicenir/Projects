@@ -4,6 +4,7 @@ import { VehicleProvider, useVehicle } from "@/context/VehicleContext";
 import { TopBar } from "@/components/layout/TopBar";
 import { HeroPanel } from "@/components/hero/HeroPanel";
 import { KpiStrip } from "@/components/kpi/KpiStrip";
+import { DrivesSection } from "@/components/drives/DrivesSection";
 import { EmptyState, ErrorState } from "@/components/ui/EmptyState";
 import { Skeleton } from "@/components/ui/Skeleton";
 
@@ -34,6 +35,7 @@ function Dashboard() {
         <>
           <HeroPanel carId={carId} />
           <KpiStrip />
+          <DrivesSection carId={carId} />
         </>
       )}
     </main>
