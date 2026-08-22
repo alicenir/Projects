@@ -7,6 +7,7 @@ import { KpiStrip } from "@/components/kpi/KpiStrip";
 import { DrivesSection } from "@/components/drives/DrivesSection";
 import { ChargingSection } from "@/components/charging/ChargingSection";
 import { BatteryHealthSection } from "@/components/battery/BatteryHealthSection";
+import { TrendsSection } from "@/components/trends/TrendsSection";
 import { EmptyState, ErrorState } from "@/components/ui/EmptyState";
 import { Skeleton } from "@/components/ui/Skeleton";
 
@@ -40,6 +41,7 @@ function Dashboard() {
           <DrivesSection carId={carId} />
           <ChargingSection carId={carId} />
           <BatteryHealthSection carId={carId} />
+          <TrendsSection carId={carId} />
         </>
       )}
     </main>
