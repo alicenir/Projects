@@ -70,6 +70,27 @@ comes from TeslaMateApi on every request. Point `TESLAMATE_API_URL` at your inst
 `API_TOKEN` if it requires one), and it can sit on the same Docker network as your existing TeslaMate
 stack or reach it over the LAN.
 
+## Deploying via Portainer
+
+1. In Portainer, go to **Stacks → Add stack**.
+2. Choose **Repository** and point it at this repo, with **Reference** set to this branch and
+   **Compose path** set to `teslamate-unified/docker-compose.yml` (or paste the contents of
+   `docker-compose.yml` directly under **Web editor** if you'd rather not link the repo).
+3. Under **Environment variables**, set:
+   - `TESLAMATE_API_URL` — your TeslaMateApi URL, e.g. `http://192.168.50.8:8080` (no trailing
+     slash, no `/api` suffix). If TeslaMateApi runs as another container on the same Docker
+     network, you can use its container/service name instead of an IP.
+   - `API_TOKEN` — the bearer token from TeslaMateApi's own `.env` (its `API_TOKEN` value). Leave
+     it blank if that instance has `API_TOKEN_DISABLE=true`.
+4. Deploy the stack. Portainer builds the image from the included `Dockerfile` (multi-stage: Node
+   build → nginx serve) and starts the `teslamate-unified` container.
+5. Open `http://<host>:8090`. There's no login, no settings panel, and nothing to configure in the
+   app itself — everything comes from the two environment variables above. Change the host port by
+   editing the `ports` mapping in the stack (`"8090:80"`) if 8090 is already taken on your NAS.
+6. If the map tiles or the dashboard data don't load, check the container's logs in Portainer first
+   — nginx logs both its own errors and proxy failures to `/api`, which is the fastest way to tell
+   a bad `TESLAMATE_API_URL`/`API_TOKEN` apart from TeslaMateApi itself being down.
+
 ## Type checking & building
 
 ```bash
