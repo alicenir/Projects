@@ -1,0 +1,139 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+:root {
+  --accent: #7c5cff;
+  /* Secondary hue used only for the ambient background fields. */
+  --accent-alt: #f5c518;
+
+  --base: 30 33 40; /* charcoal */
+  --surface: 39 43 52;
+  --surface-raised: 51 56 68;
+  --ink: 241 233 222; /* cream */
+  --ink-muted: 154 159 172;
+  --line: 255 255 255;
+  --line-opacity: 0.08;
+}
+
+:root.light {
+  --base: 244 241 236;
+  --surface: 255 255 255;
+  --surface-raised: 255 255 255;
+  --ink: 33 36 43;
+  --ink-muted: 106 112 124;
+  --line: 0 0 0;
+  --line-opacity: 0.08;
+}
+
+* {
+  scrollbar-color: rgb(var(--surface-raised)) transparent;
+}
+
+html,
+body,
+#root {
+  height: 100%;
+}
+
+body {
+  @apply bg-canvas text-ink antialiased;
+  font-family: "Inter", system-ui, sans-serif;
+  /* Large, soft colour fields — Flame's energy without the diagonal stripes
+     cutting through the content. */
+  background-image:
+    radial-gradient(
+      ellipse 70% 55% at 5% -15%,
+      color-mix(in srgb, var(--accent) 32%, transparent),
+      transparent 62%
+    ),
+    radial-gradient(
+      ellipse 55% 45% at 98% 0%,
+      color-mix(in srgb, var(--accent-alt) 16%, transparent),
+      transparent 58%
+    ),
+    radial-gradient(
+      ellipse 60% 50% at 70% 100%,
+      color-mix(in srgb, var(--accent) 14%, transparent),
+      transparent 60%
+    );
+  background-attachment: fixed;
+}
+
+.glass {
+  background-color: rgb(var(--surface) / 0.62);
+  border: 1px solid rgb(var(--line) / var(--line-opacity));
+  @apply backdrop-blur-xl;
+}
+
+:root.light .glass {
+  background-color: rgb(var(--surface) / 0.82);
+  @apply shadow-sm;
+}
+
+.hairline {
+  border-color: rgb(var(--line) / var(--line-opacity));
+}
+
+/* Subtle inset fill that works on both themes (white/x only works on dark). */
+.sunken {
+  background-color: rgb(var(--line) / 0.05);
+}
+.sunken-strong {
+  background-color: rgb(var(--line) / 0.1);
+}
+.hover-sunken:hover {
+  background-color: rgb(var(--line) / 0.07);
+}
+
+/* Form + button primitives, so light and dark both stay legible. */
+.field {
+  @apply w-full rounded-xl px-3.5 py-2.5 text-sm text-ink placeholder:text-ink-muted focus:outline-none;
+  background-color: rgb(var(--line) / 0.06);
+  border: 1px solid rgb(var(--line) / var(--line-opacity));
+}
+.field:focus {
+  border-color: color-mix(in srgb, var(--accent) 60%, transparent);
+}
+
+.btn-primary {
+  @apply rounded-xl px-4 py-2 text-sm font-semibold text-white transition-opacity hover:opacity-90 disabled:opacity-50;
+  background-color: var(--accent);
+}
+
+.btn-ghost {
+  @apply rounded-xl px-4 py-2 text-sm font-medium text-ink-muted transition-colors hover:text-ink;
+  border: 1px solid transparent;
+}
+
+.btn-outline {
+  @apply rounded-xl px-4 py-2 text-sm font-medium text-ink-muted transition-colors;
+  border: 1px solid rgb(var(--line) / var(--line-opacity));
+}
+.btn-outline:hover {
+  color: rgb(var(--ink));
+  border-color: color-mix(in srgb, var(--accent) 60%, transparent);
+}
+
+.scrollbar-thin::-webkit-scrollbar {
+  width: 6px;
+  height: 6px;
+}
+.scrollbar-thin::-webkit-scrollbar-thumb {
+  background: rgb(var(--surface-raised));
+  border-radius: 999px;
+}
+
+@keyframes shimmer {
+  0% {
+    background-position: -200% 0;
+  }
+  100% {
+    background-position: 200% 0;
+  }
+}
+.shimmer {
+  background: linear-gradient(90deg, transparent, rgba(255, 255, 255, 0.08), transparent);
+  background-size: 200% 100%;
+  animation: shimmer 1.6s ease-in-out infinite;
+}

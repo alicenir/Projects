@@ -1,0 +1,81 @@
+import {
+  DndContext,
+  type DragEndEvent,
+  PointerSensor,
+  closestCenter,
+  useSensor,
+  useSensors,
+} from "@dnd-kit/core";
+import { SortableContext, arrayMove, rectSortingStrategy } from "@dnd-kit/sortable";
+import { api } from "../lib/api";
+import { useStore } from "../store/useStore";
+import type { Item } from "../types";
+import { AppCard } from "./AppCard";
+
+interface Props {
+  items: Item[];
+  accent?: string;
+  onEdit: (item: Item) => void;
+  onAddClick?: () => void;
+}
+
+export function AppGrid({ items, accent, onEdit, onAddClick }: Props) {
+  const editMode = useStore((s) => s.editMode);
+  const upsertItem = useStore((s) => s.upsertItem);
+  const removeItem = useStore((s) => s.removeItem);
+  const sensors = useSensors(useSensor(PointerSensor, { activationConstraint: { distance: 6 } }));
+
+  async function handleDelete(item: Item) {
+    if (!confirm(`Remove "${item.name}"?`)) return;
+    await api.delete(`/items/${item.id}`);
+    removeItem(item.id);
+  }
+
+  async function handleDragEnd(event: DragEndEvent) {
+    const { active, over } = event;
+    if (!over || active.id === over.id) return;
+
+    const oldIndex = items.findIndex((i) => i.id === active.id);
+    const newIndex = items.findIndex((i) => i.id === over.id);
+    const reordered = arrayMove(items, oldIndex, newIndex).map((item, index) => ({
+      ...item,
+      sort_order: index,
+    }));
+    reordered.forEach((item) => upsertItem(item));
+    await api.post("/items/reorder", {
+      items: reordered.map((item) => ({ id: item.id, sort_order: item.sort_order })),
+    });
+  }
+
+  if (items.length === 0 && !editMode) return null;
+
+  return (
+    <DndContext sensors={sensors} collisionDetection={closestCenter} onDragEnd={handleDragEnd}>
+      <SortableContext items={items.map((i) => i.id)} strategy={rectSortingStrategy}>
+        <div className="grid grid-cols-2 gap-2 sm:gap-2.5 lg:grid-cols-3 2xl:grid-cols-4">
+          {items.map((item) => (
+            <AppCard
+              key={item.id}
+              item={item}
+              accent={accent}
+              editMode={editMode}
+              onEdit={onEdit}
+              onDelete={handleDelete}
+            />
+          ))}
+          {editMode && onAddClick && (
+            <button
+              onClick={onAddClick}
+              className="hairline flex items-center gap-3 rounded-xl border border-dashed px-3 py-2.5 text-ink-muted transition-colors hover:border-accent/60 hover:text-accent"
+            >
+              <span className="flex h-11 w-11 shrink-0 items-center justify-center rounded-lg sunken text-xl">
+                +
+              </span>
+              <span className="text-[13px] font-bold uppercase tracking-wide">Add</span>
+            </button>
+          )}
+        </div>
+      </SortableContext>
+    </DndContext>
+  );
+}
