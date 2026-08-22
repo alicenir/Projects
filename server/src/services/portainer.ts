@@ -1,4 +1,5 @@
 import { getSetting } from "../db.js";
+import { lanFetch } from "../lib/lanFetch.js";
 
 export interface ContainerStatus {
   id: string;
@@ -43,7 +44,7 @@ async function call(path: string, override?: { url: string; apiKey: string }) {
   const controller = new AbortController();
   const timeout = setTimeout(() => controller.abort(), 10000);
   try {
-    const res = await fetch(`${cfg.url}${path}`, {
+    const res = await lanFetch(`${cfg.url}${path}`, {
       headers: { "X-Api-Key": cfg.apiKey },
       signal: controller.signal,
     });

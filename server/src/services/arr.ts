@@ -1,4 +1,5 @@
 import { getSetting } from "../db.js";
+import { lanFetch } from "../lib/lanFetch.js";
 
 export type ArrService = "sonarr" | "radarr";
 
@@ -62,7 +63,7 @@ async function callArr(
   const controller = new AbortController();
   const timeout = setTimeout(() => controller.abort(), 10000);
   try {
-    const res = await fetch(`${cfg.url}${path}${qs ? `?${qs}` : ""}`, {
+    const res = await lanFetch(`${cfg.url}${path}${qs ? `?${qs}` : ""}`, {
       headers: { "X-Api-Key": cfg.apiKey },
       signal: controller.signal,
     });
@@ -81,7 +82,7 @@ async function postArr(service: ArrService, path: string, body: unknown): Promis
   const controller = new AbortController();
   const timeout = setTimeout(() => controller.abort(), 20000);
   try {
-    const res = await fetch(`${cfg.url}${path}`, {
+    const res = await lanFetch(`${cfg.url}${path}`, {
       method: "POST",
       headers: { "X-Api-Key": cfg.apiKey, "Content-Type": "application/json" },
       body: JSON.stringify(body),
@@ -307,7 +308,7 @@ export async function fetchCover(
   const controller = new AbortController();
   const timeout = setTimeout(() => controller.abort(), 10000);
   try {
-    const res = await fetch(`${cfg.url}${path}`, {
+    const res = await lanFetch(`${cfg.url}${path}`, {
       headers: { "X-Api-Key": cfg.apiKey },
       signal: controller.signal,
     });
@@ -327,7 +328,7 @@ export async function testArrConnection(service: ArrService, url: string, apiKey
   const controller = new AbortController();
   const timeout = setTimeout(() => controller.abort(), 8000);
   try {
-    const res = await fetch(`${url.replace(/\/+$/, "")}/api/v3/system/status`, {
+    const res = await lanFetch(`${url.replace(/\/+$/, "")}/api/v3/system/status`, {
       headers: { "X-Api-Key": apiKey },
       signal: controller.signal,
     });

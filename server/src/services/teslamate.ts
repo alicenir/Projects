@@ -1,5 +1,6 @@
 import type { Server } from "socket.io";
 import { getSetting } from "../db.js";
+import { lanFetch } from "../lib/lanFetch.js";
 
 export interface TeslaSnapshot {
   configured: boolean;
@@ -118,7 +119,7 @@ async function call(path: string, overrides?: { url: string; token: string }) {
   const controller = new AbortController();
   const timeout = setTimeout(() => controller.abort(), 10000);
   try {
-    const res = await fetch(`${cfg.url}${path}`, { headers, signal: controller.signal });
+    const res = await lanFetch(`${cfg.url}${path}`, { headers, signal: controller.signal });
     if (res.status === 401 || res.status === 403) throw new Error("Unauthorized — check the API token");
     if (!res.ok) throw new Error(`HTTP ${res.status}`);
     return await res.json();

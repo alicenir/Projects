@@ -1,5 +1,6 @@
 import type { Server } from "socket.io";
 import { db } from "../db.js";
+import { lanFetch } from "../lib/lanFetch.js";
 
 export type HealthState = "up" | "down" | "unknown";
 
@@ -27,13 +28,13 @@ async function probe(url: string): Promise<{ state: HealthState; status: number 
   try {
     let res: Response;
     try {
-      res = await fetch(url, { method: "HEAD", signal: controller.signal, redirect: "follow" });
+      res = await lanFetch(url, { method: "HEAD", signal: controller.signal, redirect: "follow" });
       // Plenty of apps don't implement HEAD; fall back rather than call it down.
       if (res.status === 405 || res.status === 501) {
-        res = await fetch(url, { method: "GET", signal: controller.signal, redirect: "follow" });
+        res = await lanFetch(url, { method: "GET", signal: controller.signal, redirect: "follow" });
       }
     } catch {
-      res = await fetch(url, { method: "GET", signal: controller.signal, redirect: "follow" });
+      res = await lanFetch(url, { method: "GET", signal: controller.signal, redirect: "follow" });
     }
 
     // Anything that answers is "up" — a 401/403 means the service is running

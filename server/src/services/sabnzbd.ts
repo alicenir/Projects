@@ -1,5 +1,6 @@
 import type { Server } from "socket.io";
 import { getSetting } from "../db.js";
+import { lanFetch } from "../lib/lanFetch.js";
 
 export interface SabnzbdSlot {
   nzo_id: string;
@@ -60,7 +61,7 @@ async function callApi(mode: string, extra: Record<string, string> = {}) {
   const controller = new AbortController();
   const timeout = setTimeout(() => controller.abort(), 8000);
   try {
-    const res = await fetch(`${config.url}/api?${params.toString()}`, {
+    const res = await lanFetch(`${config.url}/api?${params.toString()}`, {
       signal: controller.signal,
     });
     if (!res.ok) throw new Error(`http_${res.status}`);
@@ -172,7 +173,7 @@ export async function testConnection(url: string, apiKey: string) {
   const controller = new AbortController();
   const timeout = setTimeout(() => controller.abort(), 8000);
   try {
-    const res = await fetch(`${url.replace(/\/+$/, "")}/api?${params.toString()}`, {
+    const res = await lanFetch(`${url.replace(/\/+$/, "")}/api?${params.toString()}`, {
       signal: controller.signal,
     });
     if (!res.ok) return { ok: false, error: `HTTP ${res.status}` };

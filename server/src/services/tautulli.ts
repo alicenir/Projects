@@ -1,5 +1,6 @@
 import type { Server } from "socket.io";
 import { getSetting } from "../db.js";
+import { lanFetch } from "../lib/lanFetch.js";
 
 export interface PlexStream {
   key: string;
@@ -41,7 +42,7 @@ async function call(cmd: string, extra: Record<string, string> = {}, override?: 
   const controller = new AbortController();
   const timeout = setTimeout(() => controller.abort(), 10000);
   try {
-    const res = await fetch(`${cfg.url}/api/v2?${params}`, { signal: controller.signal });
+    const res = await lanFetch(`${cfg.url}/api/v2?${params}`, { signal: controller.signal });
     if (!res.ok) throw new Error(`HTTP ${res.status}`);
     const body = await res.json();
     // Tautulli always returns 200; failures show up in the envelope.
@@ -131,7 +132,7 @@ export async function fetchArt(thumb: string): Promise<{ body: ArrayBuffer; cont
   const controller = new AbortController();
   const timeout = setTimeout(() => controller.abort(), 10000);
   try {
-    const res = await fetch(`${cfg.url}/api/v2?${params}`, { signal: controller.signal });
+    const res = await lanFetch(`${cfg.url}/api/v2?${params}`, { signal: controller.signal });
     if (!res.ok) return null;
     return {
       body: await res.arrayBuffer(),
