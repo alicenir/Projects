@@ -8,10 +8,11 @@ import { testConnection as testTeslaConnection } from "../services/teslamate.js"
 import { testConnection as testTautulliConnection } from "../services/tautulli.js";
 import { invalidateWeatherCache } from "../services/weather.js";
 import { testConnection as testProwlarrConnection } from "../services/prowlarr.js";
+import { invalidateInventoryCache } from "../services/inventory.js";
 
 export const settingsRouter = Router();
 
-const SECRET_KEYS = ["password_hash", "sabnzbd_api_key", "sonarr_api_key", "radarr_api_key", "teslamate_api_token", "tautulli_api_key", "prowlarr_api_key", "portainer_api_key"];
+const SECRET_KEYS = ["password_hash", "sabnzbd_api_key", "sonarr_api_key", "radarr_api_key", "teslamate_api_token", "tautulli_api_key", "prowlarr_api_key", "portainer_api_key", "nvd_api_key"];
 const URL_KEYS = ["sabnzbd_url", "sonarr_url", "radarr_url", "teslamate_url", "tautulli_url", "prowlarr_url", "portainer_url"];
 
 settingsRouter.get("/", (req, res) => {
@@ -32,6 +33,9 @@ settingsRouter.get("/", (req, res) => {
   visible.weather_configured = String(Boolean(all.weather_latitude && all.weather_longitude));
   visible.prowlarr_configured = String(Boolean(all.prowlarr_url && all.prowlarr_api_key));
   visible.portainer_configured = String(Boolean(all.portainer_url && all.portainer_api_key));
+  // The NVD key is optional — it only raises the rate limit — so the UI just
+  // needs to know whether one is stored, never what it is.
+  visible.nvd_api_key_configured = String(Boolean(all.nvd_api_key));
   if (!authed) {
     for (const key of URL_KEYS) delete visible[key];
   }
@@ -50,6 +54,8 @@ settingsRouter.put("/", requireAuth, (req, res) => {
   // Connection details may have changed — don't serve stale media from the old host.
   invalidateMediaCache();
   invalidateWeatherCache();
+  // A new (or removed) integration changes what there is to scan for CVEs.
+  invalidateInventoryCache();
   res.json({ ok: true });
 });
 

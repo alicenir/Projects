@@ -6,7 +6,7 @@ import { useStore } from "../store/useStore";
 import type { GeocodeResult } from "../types";
 
 const ACCENTS = ["#7c5cff", "#22c55e", "#f97316", "#ef4444", "#06b6d4", "#ec4899"];
-const TABS = ["General", "Appearance", "Weather", "Downloads", "Media", "Indexers", "Plex", "Docker", "Car", "Categories", "Security"] as const;
+const TABS = ["General", "Appearance", "Weather", "Downloads", "Media", "Indexers", "Plex", "Docker", "Car", "Categories", "Vulnerabilities", "Security"] as const;
 
 type TabName = (typeof TABS)[number];
 
@@ -58,6 +58,7 @@ export function SettingsPanel({
   const [searchingPlace, setSearchingPlace] = useState(false);
   const [testingTesla, setTestingTesla] = useState(false);
   const [teslaCars, setTeslaCars] = useState<{ id: number; name: string }[]>([]);
+  const [vuln, setVuln] = useState({ enabled: true, nvdKey: "" });
   const [currentPassword, setCurrentPassword] = useState("");
   const [newPassword, setNewPassword] = useState("");
 
@@ -85,6 +86,7 @@ export function SettingsPanel({
       token: "",
       carId: settings.teslamate_car_id ?? "1",
     });
+    setVuln({ enabled: settings.security_enabled === "true", nvdKey: "" });
     setArr({
       sonarr_url: settings.sonarr_url ?? "",
       sonarr_api_key: "",
@@ -97,6 +99,28 @@ export function SettingsPanel({
     await api.put("/settings", { greeting_name: greeting, search_engine: searchEngine });
     setSettings({ ...settings!, greeting_name: greeting, search_engine: searchEngine });
     toast.success("Saved");
+  }
+
+  async function saveVulnerabilities() {
+    const payload: Record<string, string> = { security_enabled: String(vuln.enabled) };
+    if (vuln.nvdKey) payload.nvd_api_key = vuln.nvdKey;
+    await api.put("/settings", payload);
+    setSettings({
+      ...settings!,
+      security_enabled: String(vuln.enabled),
+      nvd_api_key_configured: String(Boolean(vuln.nvdKey) || settings!.nvd_api_key_configured === "true"),
+    });
+    setVuln((v) => ({ ...v, nvdKey: "" }));
+    toast.success("Saved");
+  }
+
+  async function rescanVulnerabilities() {
+    try {
+      await api.post("/security/refresh");
+      toast.success("Rescanning — results appear on the dashboard shortly");
+    } catch (err) {
+      toast.error(err instanceof Error ? err.message : "Rescan failed");
+    }
   }
 
   async function saveAppearance(nextTheme = theme, nextAccent = accent) {
@@ -952,6 +976,75 @@ export function SettingsPanel({
                       </li>
                     ))}
                   </ul>
+                </div>
+              )}
+
+              {tab === "Vulnerabilities" && (
+                <div className="flex flex-col gap-4">
+                  <div>
+                    <h2 className="text-lg font-semibold">Vulnerabilities</h2>
+                    <p className="mt-1 text-sm text-ink-muted">
+                      Checks the versions of the services you've connected above against the{" "}
+                      <a
+                        className="underline"
+                        href="https://nvd.nist.gov"
+                        target="_blank"
+                        rel="noreferrer noopener"
+                      >
+                        NVD
+                      </a>{" "}
+                      CVE database, ranked by CVSS severity, EPSS exploitation likelihood and
+                      whether CISA lists the flaw as actively exploited. Only product names and
+                      version numbers leave your network — never a URL or API key.
+                    </p>
+                  </div>
+
+                  <label className="flex items-center gap-3 text-sm text-ink">
+                    <input
+                      type="checkbox"
+                      checked={vuln.enabled}
+                      onChange={(e) => setVuln((v) => ({ ...v, enabled: e.target.checked }))}
+                      className="h-4 w-4 accent-[var(--accent)]"
+                    />
+                    Scan my stack for known vulnerabilities
+                  </label>
+
+                  <label className="text-sm text-ink-muted">
+                    NVD API key (optional)
+                    <input
+                      type="password"
+                      value={vuln.nvdKey}
+                      onChange={(e) => setVuln((v) => ({ ...v, nvdKey: e.target.value }))}
+                      placeholder={
+                        settings.nvd_api_key_configured === "true"
+                          ? "•••••••• (unchanged)"
+                          : "Speeds scans up; not required"
+                      }
+                      className="field mt-1"
+                    />
+                    <span className="mt-1 block text-xs text-ink-muted">
+                      Without a key NVD allows 5 requests per 30 seconds, so a full sweep takes a
+                      minute or two. A free key from{" "}
+                      <a
+                        className="underline"
+                        href="https://nvd.nist.gov/developers/request-an-api-key"
+                        target="_blank"
+                        rel="noreferrer noopener"
+                      >
+                        nvd.nist.gov
+                      </a>{" "}
+                      raises that to 50.
+                    </span>
+                  </label>
+
+                  <div className="ml-auto flex gap-2">
+                    <button onClick={rescanVulnerabilities} className="btn-outline">
+                      Rescan now
+                    </button>
+                    <button onClick={saveVulnerabilities} className="btn-primary">
+                      Save
+                    </button>
+                  </div>
                 </div>
               )}
 

@@ -294,3 +294,60 @@ export interface PortainerEndpoint {
   name: string;
   status: "up" | "down";
 }
+
+export type FindingStatus = "affected" | "possible" | "unknown";
+export type RiskLevel = "critical" | "high" | "medium" | "low";
+
+export interface Finding {
+  id: string;
+  component: string;
+  componentName: string;
+  version: string | null;
+  status: FindingStatus;
+  summary: string;
+  published: string | null;
+  lastModified: string | null;
+  cvss: number | null;
+  severity: string | null;
+  vector: string | null;
+  cwes: string[];
+  kev: boolean;
+  kevAddedAt: string | null;
+  kevDueAt: string | null;
+  epss: number | null;
+  epssPercentile: number | null;
+  score: number;
+  level: RiskLevel;
+  fixedIn: string | null;
+  url: string;
+}
+
+export interface ComponentReport {
+  key: string;
+  name: string;
+  version: string | null;
+  source: string;
+  matchMode: "cpe" | "keyword";
+  scanned: boolean;
+  error: string | null;
+  truncated: boolean;
+  findings: Finding[];
+}
+
+export interface SecuritySnapshot {
+  enabled: boolean;
+  configured: boolean;
+  scanning: boolean;
+  scannedAt: string | null;
+  error: string | null;
+  components: ComponentReport[];
+  findings: Finding[];
+  counts: {
+    total: number;
+    critical: number;
+    high: number;
+    medium: number;
+    low: number;
+    kev: number;
+  };
+}

@@ -13,6 +13,7 @@ import { ItemModal } from "./components/ItemModal";
 import { LoginModal } from "./components/LoginModal";
 import { MediaSection } from "./components/MediaSection";
 import { SabnzbdWidget } from "./components/SabnzbdWidget";
+import { SecurityWidget } from "./components/SecurityWidget";
 import { SectionHeading } from "./components/SectionHeading";
 import { SettingsPanel } from "./components/SettingsPanel";
 import { TeslaWidget } from "./components/TeslaWidget";
@@ -132,6 +133,7 @@ export default function App() {
           <WeatherWidget />
           <ProwlarrWidget />
           <PortainerWidget />
+          <SecurityWidget />
         </section>
 
         <MediaSection

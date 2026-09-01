@@ -34,6 +34,17 @@ db.exec(`
     key TEXT PRIMARY KEY,
     value TEXT
   );
+
+  -- Vulnerability findings are expensive to fetch (NVD rate-limits anonymous
+  -- callers to 5 requests / 30s) and change maybe once a day, so they're
+  -- persisted rather than kept in memory — a container restart shouldn't cost
+  -- another full sweep of the public APIs.
+  CREATE TABLE IF NOT EXISTS cve_cache (
+    component TEXT PRIMARY KEY,
+    version TEXT,
+    fetched_at INTEGER NOT NULL,
+    payload TEXT NOT NULL
+  );
 `);
 
 const defaultSettings: Record<string, string> = {
@@ -62,6 +73,8 @@ const defaultSettings: Record<string, string> = {
   portainer_url: "",
   portainer_api_key: "",
   portainer_endpoint_id: "1",
+  security_enabled: "true",
+  nvd_api_key: "",
 };
 
 const insertSetting = db.prepare(

@@ -39,6 +39,10 @@ Tesla, Plex, Prowlarr indexers and Docker containers built in.
   Nm" countdown from `disabledTill`), and any system health warnings/errors Prowlarr is reporting.
 - **Container status** — which Docker containers on your host are running vs. exited/restarting/dead, via
   Portainer's API. No SSH or host-level Docker socket access needed — just a Portainer API token.
+- **Vulnerability watch** — checks the versions of the services you've already connected (Sonarr, Radarr,
+  Prowlarr, SABnzbd, Tautulli, Plex, Portainer, Docker and runc) against NVD's CVE database and tells you
+  which known flaws actually affect *your* builds — with the fixed-in version, whether CISA lists the flaw
+  as actively exploited, and how likely exploitation is per EPSS.
 - **Theming** — dark/light mode and a configurable accent color.
 - **Optional password lock** — editing (adding/removing apps, changing settings) can be locked behind a
   password; browsing the dashboard itself is always open.
@@ -56,8 +60,9 @@ The server exposes a REST API under `/api`, a WebSocket channel for live SABnzbd
 production) serves the built client as static files — so the whole app runs as a single container on a
 single port.
 
-Weather is the only integration that talks to the public internet; everything else stays on your
-LAN. Health checks only ever return a status code and timing to the browser, never a response body.
+Weather and the vulnerability watch are the only integrations that talk to the public internet;
+everything else stays on your LAN. Health checks only ever return a status code and timing to the
+browser, never a response body.
 
 The Tesla widget reads `/api/v1/cars/:id/status` from TeslaMateApi and pushes snapshots over the same
 Socket.IO channel as SABnzbd. Polling backs off by state — 10s while driving or charging, 30s when
@@ -108,6 +113,10 @@ npm install
 npm run dev         # http://localhost:5173 (proxies /api and /socket.io to :5000)
 ```
 
+The server has a test suite covering the vulnerability matching and scoring, run with `npm test` from
+`server/`. It needs no network access: the CVE fixtures are real (trimmed) NVD records, and the
+integration test stands up local stubs for both the LAN services and the NVD/EPSS endpoints.
+
 ## Running with Docker Compose
 
 ```bash
@@ -155,6 +164,48 @@ volume.
 All other configuration (SABnzbd/Sonarr/Radarr/TeslaMate connections, theme, greeting, search engine, password) lives in the
 database and is managed from the in-app **Settings** panel — nothing else needs to be set via environment
 variables or config files.
+
+## Vulnerability watch
+
+The **Vulnerabilities** widget answers a question the rest of the dashboard can't: *is anything I'm
+running known to be broken?* It's on by default and can be turned off under **Settings →
+Vulnerabilities**.
+
+**How it works**
+
+1. **Inventory.** Nothing is scanned or discovered on your network. The versions come from the
+   integrations you already configured — `system/status` for the *arr apps, `mode=version` for SABnzbd,
+   Tautulli for both its own version and the Plex Media Server it watches, and Portainer for both
+   Portainer and the Docker engine (plus runc) behind it.
+2. **Lookup.** Each component is queried against the [NVD 2.0 API](https://nvd.nist.gov/developers).
+   Where a product has a CPE name that NVD actually assigns, the query is version-precise and the
+   result is filtered again locally against the advisory's own version ranges, so a patched build
+   reports clean. Products without a CPE fall back to a keyword search and are flagged in the UI as
+   unconfirmed rather than presented as fact.
+3. **Prioritisation.** Findings are scored 0–100. The scale is anchored on CVSS so the number keeps its
+   usual meaning, [EPSS](https://www.first.org/epss/) nudges it up by how likely exploitation actually
+   is in the next 30 days, and membership of CISA's Known Exploited Vulnerabilities catalog (which
+   rides along in the NVD record as `cisaExploitAdd`) overrides both and pins the finding to the top.
+
+**Cost and privacy**
+
+- Requests carry product names and version numbers only — never a URL, API key, or anything else about
+  your network.
+- A sweep runs at startup and every six hours, and results are cached in SQLite so a restart doesn't
+  trigger another one. A component is only re-queried when its version changes or its cache goes stale.
+- NVD allows 5 requests per 30 seconds anonymously, so a full sweep takes a minute or two. A free
+  [API key](https://nvd.nist.gov/developers/request-an-api-key) raises that to 50 and can be pasted into
+  the same settings tab; it is optional and stored write-only, like every other credential here.
+
+**Caveats worth knowing**
+
+- CPE names are assigned by NVD analysts and can't be guessed — a wrong one silently returns nothing.
+  Only names verified against real advisories are used (Plex, Docker, runc, Traefik); the rest use
+  keyword search. If you confirm a CPE for another product, add it to `KNOWN_CPE` in
+  `server/src/services/inventory.ts` and that component becomes version-precise too.
+- A clean result means "nothing in NVD matches this version", not "this is secure". Advisories that were
+  never assigned a CVE, and anything in a container image other than the components listed above, are
+  out of scope.
 
 ## Roadmap / ideas to make it even more awesome
 

@@ -18,10 +18,12 @@ import { tautulliRouter } from "./routes/tautulli.js";
 import { healthRouter } from "./routes/health.js";
 import { prowlarrRouter } from "./routes/prowlarr.js";
 import { portainerRouter } from "./routes/portainer.js";
+import { securityRouter } from "./routes/security.js";
 import { getSnapshot, startSabnzbdPolling } from "./services/sabnzbd.js";
 import { getSnapshot as getTeslaSnapshot, startTeslaPolling } from "./services/teslamate.js";
 import { getActivity, startTautulliPolling } from "./services/tautulli.js";
 import { snapshot as healthSnapshot, startHealthPolling } from "./services/health.js";
+import { startSecurityPolling } from "./services/cve.js";
 
 const __dirname = path.dirname(fileURLToPath(import.meta.url));
 const PORT = Number(process.env.PORT ?? 5000);
@@ -44,6 +46,7 @@ app.use("/api/tautulli", tautulliRouter);
 app.use("/api/health-checks", healthRouter);
 app.use("/api/prowlarr", prowlarrRouter);
 app.use("/api/portainer", portainerRouter);
+app.use("/api/security", securityRouter);
 
 if (fs.existsSync(CLIENT_DIST)) {
   app.use(
@@ -83,6 +86,7 @@ startSabnzbdPolling(io);
 startTeslaPolling(io);
 startTautulliPolling(io);
 startHealthPolling(io);
+startSecurityPolling();
 
 httpServer.listen(PORT, () => {
   console.log(`Homebase server listening on port ${PORT}`);
