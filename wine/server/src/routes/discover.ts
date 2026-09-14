@@ -229,14 +229,22 @@ discoverRouter.get('/game/blind', (req, res) => {
     .map((p) => p.answer);
   const options = [answer, ...decoys].sort(() => Math.random() - 0.5);
 
-  // The grape and country are scrubbed from the note so the answer is not given away.
-  const scrub = (text: string) => {
-    let out = text;
-    for (const term of [answer, String(review.variety ?? ''), String(review.country ?? ''), String(review.province ?? '')]) {
-      if (term.length > 2) out = out.replace(new RegExp(term.replace(/[.*+?^${}()|[\]\\]/g, '\\$&'), 'gi'), '—');
-    }
-    return out;
-  };
+  /**
+   * Scrub the answer out of the note. Whole names are the easy half; critics
+   * also write "Zin", "Cab" and "Sauv", so any word that is a prefix of a
+   * giveaway (or shares its first four letters) goes too.
+   */
+  const giveaways = [answer, String(review.variety ?? ''), String(review.country ?? ''), String(review.province ?? '')]
+    .flatMap((term) => term.split(/[^A-Za-z]+/))
+    .filter((word) => word.length > 2)
+    .map((word) => word.toLowerCase());
+
+  const scrub = (text: string) =>
+    text.replace(/[A-Za-z]{3,}/g, (token) => {
+      const lower = token.toLowerCase();
+      const leaks = giveaways.some((word) => word.startsWith(lower) || lower.startsWith(word.slice(0, 4)));
+      return leaks ? '—' : token;
+    });
 
   res.json({
     mode,
