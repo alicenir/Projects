@@ -235,12 +235,12 @@ discoverRouter.get('/game/blind', (req, res) => {
    * giveaway (or shares its first four letters) goes too.
    */
   const giveaways = [answer, String(review.variety ?? ''), String(review.country ?? ''), String(review.province ?? '')]
-    .flatMap((term) => term.split(/[^A-Za-z]+/))
+    .flatMap((term) => term.split(/[^\p{L}]+/u))
     .filter((word) => word.length > 2)
     .map((word) => word.toLowerCase());
 
   const scrub = (text: string) =>
-    text.replace(/[A-Za-z]{3,}/g, (token) => {
+    text.replace(/\p{L}{3,}/gu, (token) => {
       const lower = token.toLowerCase();
       const leaks = giveaways.some((word) => word.startsWith(lower) || lower.startsWith(word.slice(0, 4)));
       return leaks ? '—' : token;
