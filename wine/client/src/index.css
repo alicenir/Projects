@@ -1,0 +1,201 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+/*
+ * Chart surfaces and series colours come from a validated palette (see
+ * README: "Chart colours"). The wine-type series order — red, port, dessert,
+ * sparkling, white, rosé — is the order that clears the colour-blind
+ * separation gates in both themes, so do not re-order it casually.
+ */
+:root {
+  color-scheme: light;
+
+  --plane: #f7f4f0;
+  --surface-1: #fcfcfb;
+  --surface-2: #f2ede7;
+  --text-primary: #17110f;
+  --text-secondary: #52514e;
+  --text-muted: #898781;
+  --border: rgba(17, 17, 11, 0.1);
+  --grid: #e1e0d9;
+  --axis: #c3c2b7;
+
+  --accent: #8a1d3c;
+  --accent-soft: #f6e7ec;
+  --accent-ink: #ffffff;
+
+  /* categorical slots (generic series) */
+  --series-1: #2a78d6;
+  --series-2: #eb6834;
+  --series-3: #1baf7a;
+  --series-4: #eda100;
+  --series-5: #e87ba4;
+  --series-6: #008300;
+
+  /* wine types, in gate-passing order */
+  --wine-red: #e34948;
+  --wine-port: #4a3aa7;
+  --wine-dessert: #eb6834;
+  --wine-sparkling: #2a78d6;
+  --wine-white: #eda100;
+  --wine-rose: #e87ba4;
+
+  /* sequential ramp (magnitude) — light theme runs light to dark */
+  --heat-1: #cde2fb;
+  --heat-2: #9ec5f4;
+  --heat-3: #5598e7;
+  --heat-4: #2a78d6;
+  --heat-5: #184f95;
+  --heat-6: #0d366b;
+  --heat-1-ink: #0b0b0b;
+  --heat-2-ink: #0b0b0b;
+  --heat-3-ink: #0b0b0b;
+  --heat-4-ink: #ffffff;
+  --heat-5-ink: #ffffff;
+  --heat-6-ink: #ffffff;
+}
+
+@media (prefers-color-scheme: dark) {
+  :root:not([data-theme='light']) {
+    color-scheme: dark;
+
+    --plane: #121110;
+    --surface-1: #1a1a19;
+    --surface-2: #232220;
+    --text-primary: #ffffff;
+    --text-secondary: #c3c2b7;
+    --text-muted: #898781;
+    --border: rgba(255, 255, 255, 0.12);
+    --grid: #2c2c2a;
+    --axis: #383835;
+
+    --accent: #e79ab0;
+    --accent-soft: #34212a;
+    --accent-ink: #17110f;
+
+    --series-1: #3987e5;
+    --series-2: #d95926;
+    --series-3: #199e70;
+    --series-4: #c98500;
+    --series-5: #d55181;
+    --series-6: #008300;
+
+    --wine-red: #e66767;
+    --wine-port: #9085e9;
+    --wine-dessert: #d95926;
+    --wine-sparkling: #3987e5;
+    --wine-white: #c98500;
+    --wine-rose: #d55181;
+
+    /* on a dark surface the same hue climbs towards light instead */
+    --heat-1: #103f7d;
+    --heat-2: #1c5cab;
+    --heat-3: #256abf;
+    --heat-4: #3987e5;
+    --heat-5: #86b6ef;
+    --heat-6: #cde2fb;
+    --heat-1-ink: #ffffff;
+    --heat-2-ink: #ffffff;
+    --heat-3-ink: #ffffff;
+    --heat-4-ink: #0b0b0b;
+    --heat-5-ink: #0b0b0b;
+    --heat-6-ink: #0b0b0b;
+  }
+}
+
+:root[data-theme='dark'] {
+  color-scheme: dark;
+
+  --plane: #121110;
+  --surface-1: #1a1a19;
+  --surface-2: #232220;
+  --text-primary: #ffffff;
+  --text-secondary: #c3c2b7;
+  --text-muted: #898781;
+  --border: rgba(255, 255, 255, 0.12);
+  --grid: #2c2c2a;
+  --axis: #383835;
+
+  --accent: #e79ab0;
+  --accent-soft: #34212a;
+  --accent-ink: #17110f;
+
+  --series-1: #3987e5;
+  --series-2: #d95926;
+  --series-3: #199e70;
+  --series-4: #c98500;
+  --series-5: #d55181;
+  --series-6: #008300;
+
+  --wine-red: #e66767;
+  --wine-port: #9085e9;
+  --wine-dessert: #d95926;
+  --wine-sparkling: #3987e5;
+  --wine-white: #c98500;
+  --wine-rose: #d55181;
+
+  /* on a dark surface the same hue climbs towards light instead */
+  --heat-1: #103f7d;
+  --heat-2: #1c5cab;
+  --heat-3: #256abf;
+  --heat-4: #3987e5;
+  --heat-5: #86b6ef;
+  --heat-6: #cde2fb;
+  --heat-1-ink: #ffffff;
+  --heat-2-ink: #ffffff;
+  --heat-3-ink: #ffffff;
+  --heat-4-ink: #0b0b0b;
+  --heat-5-ink: #0b0b0b;
+  --heat-6-ink: #0b0b0b;
+}
+
+html,
+body,
+#root {
+  min-height: 100%;
+}
+
+body {
+  background: var(--plane);
+  color: var(--text-primary);
+  font-family: system-ui, -apple-system, 'Segoe UI', sans-serif;
+  -webkit-font-smoothing: antialiased;
+}
+
+@layer components {
+  .card {
+    @apply rounded-2xl border border-line bg-surface shadow-card;
+  }
+  .chip {
+    @apply inline-flex items-center gap-1 rounded-full border border-line px-2.5 py-1 text-xs text-ink-2 transition-colors hover:border-accent hover:text-accent;
+  }
+  .chip-active {
+    @apply border-transparent bg-accent text-[color:var(--accent-ink)] hover:text-[color:var(--accent-ink)];
+  }
+  .btn {
+    @apply inline-flex items-center justify-center gap-2 rounded-full border border-line px-4 py-2 text-sm font-medium text-ink transition-colors hover:border-accent hover:text-accent disabled:opacity-50;
+  }
+  .btn-primary {
+    @apply border-transparent bg-accent text-[color:var(--accent-ink)] hover:text-[color:var(--accent-ink)] hover:brightness-110;
+  }
+  .field {
+    @apply w-full rounded-xl border border-line bg-surface px-3 py-2 text-sm text-ink outline-none placeholder:text-muted focus:border-accent;
+  }
+  .label {
+    @apply text-xs font-semibold uppercase tracking-wide text-muted;
+  }
+}
+
+/* Charts hold their previous render while refetching — no skeleton flash. */
+.is-refetching {
+  opacity: 0.55;
+  transition: opacity 150ms ease-out;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  * {
+    animation-duration: 0.01ms !important;
+    transition-duration: 0.01ms !important;
+  }
+}

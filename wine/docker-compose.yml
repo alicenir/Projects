@@ -1,0 +1,21 @@
+services:
+  terroir:
+    image: terroir:latest
+    build: .
+    pull_policy: build
+    container_name: terroir
+    restart: unless-stopped
+    ports:
+      - "5100:5100"
+    environment:
+      - PORT=5100
+      - DATA_DIR=/data
+      # Which X-Wines edition to build on first boot: test (100 wines) or slim
+      # (1,007 wines, 150K ratings). Set AUTO_INGEST=0 to skip the build.
+      - EDITION=slim
+      - AUTO_INGEST=1
+    volumes:
+      - terroir_data:/data
+
+volumes:
+  terroir_data:
