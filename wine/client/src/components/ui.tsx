@@ -9,6 +9,7 @@ import { compact, flag, num, pairingIcon, slug, typeColor, vintageRange } from '
 /* --------------------------------------------------------------- chrome */
 
 const NAV = [
+  { to: '/identify', label: 'Identify a bottle' },
   { to: '/explore', label: 'Explore' },
   { to: '/analytics', label: 'Analytics' },
   { to: '/grapes', label: 'Grapes' },

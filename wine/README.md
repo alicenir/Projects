@@ -69,6 +69,79 @@ Each run writes a fresh `data/wine.db` (catalogue, disposable) and leaves `data/
 bottles, notes and wishlist) untouched. The two are attached to one connection, so a query can join
 your shelf to its wine.
 
+## Identify a bottle
+
+Type what the label says — or photograph it — and Terroir works out which wine
+it is, then tells you everything both datasets know about it.
+
+```
+"Ponzi Reserve Pinot Noir Willamette" + 2013
+        │
+        ├─ normalise    Ch. → Château, Cab Sauv → Cabernet Sauvignon, drop boilerplate
+        ├─ candidates   FTS5 over 83,037 identities (1,007 catalogue wines + 82,030 critic labels)
+        ├─ score        token coverage + Dice similarity, one typo per word forgiven,
+        │               bonuses for the producer and for a vintage that exists
+        └─ dossier      ratings, critic score and note for that vintage, vintage-by-vintage
+                        history, price benchmark, flavour lift, similar bottles
+```
+
+The critic archive is what makes this work on wines outside the ratings
+catalogue: 130K reviews collapse into **82,030 labels** — one row per wine
+across its vintages, with the producer, cuvée, grape, appellation, points and
+price range — so a bottle the community never rated can still be identified and
+described.
+
+Confidence is shown on every match, and every match says why it matched. If the
+top one is wrong, click another; the dossier re-renders against it.
+
+### From a photo
+
+```bash
+cd server && npm run ocr:setup     # one-time, ~4 MB Tesseract English model
+```
+
+Then use "Photograph the label" on the Identify page — on a phone it opens the
+camera directly. The image is preprocessed with sharp (auto-rotate, grayscale,
+normalise, a high-contrast second pass for gold-on-cream labels), read locally
+by Tesseract, stripped of boilerplate like "contains sulfites" and "750ml", and
+fed to the same resolver. **The photo never leaves the machine** — no upload, no
+third-party vision API, nothing stored.
+
+What to expect: a straight-on shot of a printed label reads reliably. Script
+faces, embossed foil, curved glass and low light do not — the OCR text is shown
+back to you so you can correct it and re-run as a text lookup.
+
+## Live prices
+
+The bundled data has a horizon: ratings run to 2021, critic prices are a 2017
+snapshot. For current prices, point Terroir at a live source — it ships a mapped
+HTTP adapter rather than a hard-coded integration, because wine pricing is a
+licensed business and everyone's access differs:
+
+| Source | Access |
+| --- | --- |
+| Vinmonopolet (NO), Systembolaget (SE), Alko (FI) | Open data, free key, refreshed daily/weekly — current price and stock for those markets |
+| Wine-Searcher | Commercial trade API, global merchant prices |
+| Liv-ex | Commercial API, real-time fine-wine market prices, LWIN identifiers |
+
+Copy `server/price-provider.example.json` to `server/data/price-provider.json`,
+fill in the URL, headers and where the fields live in the response, and restart:
+
+```json
+{
+  "name": "my-merchant",
+  "url": "https://api.example.com/v1/products?search={query}&vintage={vintage}",
+  "headers": { "Ocp-Apim-Subscription-Key": "${MERCHANT_API_KEY}" },
+  "resultsPath": "data.products",
+  "fields": { "name": "name", "price": "price.amount", "currency": "=EUR", "url": "links.self" }
+}
+```
+
+`{query}` and `{vintage}` are substituted into the URL; `${ENV_VAR}` is read from
+the environment so keys stay out of the file. Quotes are cached with the time
+they were fetched and always shown with it, and the critic benchmark stays
+underneath, explicitly labelled as a 2017 reference rather than a live quote.
+
 ## What it does with the data
 
 **Search and browse.** SQLite FTS5 over name, producer, region, country, grapes and food tags, with
@@ -114,6 +187,10 @@ All endpoints are under `/api`.
 | `GET /wines` | filtered, sorted, paginated list + facet counts |
 | `GET /wines/:id` | one wine: histogram, rating timeline, per-vintage scores, neighbours, critic benchmark, flavour profile, your cellar state |
 | `GET /wines/random`, `GET /suggest` | surprise pick; type-ahead |
+| `POST /lookup` · `GET /lookup?q=` | identify a bottle from text + vintage; returns ranked matches and the dossier for the best one |
+| `POST /lookup/photo` | identify from a label photo (multipart `photo`), read locally with Tesseract |
+| `GET /lookup/:kind/:ref` · `GET /lookup/capabilities` | the dossier for a specific match; whether OCR and a price feed are available |
+| `POST /prices/refresh` | ask the configured merchant API for current prices and cache them |
 | `GET /analytics/{summary,ratings,styles,geography,grapes,market,flavours}` | dashboard panels |
 | `GET /grapes`, `/grapes/:name` | grape encyclopedia |
 | `GET /countries`, `/countries/:code`, `/regions/:id`, `/wineries/:id` | atlas |
@@ -145,6 +222,11 @@ client/
 ## Ideas worth building next
 
 - **A real map.** Region polygons or at least lat/long pins would beat the current ranked lists.
+- **Better label reading.** Tesseract handles printed labels; a vision model would
+  handle script, foil and curved glass, at the cost of sending the photo somewhere.
+- **Barcode and LWIN matching.** Scanning the back-label barcode, or matching on
+  Liv-ex's LWIN identifiers, would beat fuzzy name matching outright where the
+  data exists.
 - **Vintage weather.** Growing-degree-days per region and year from an open climate API, plotted
   against the vintage curve, would turn "2010 scored well" into "2010 scored well because…".
 - **Drink-window alerts.** The cellar already stores a window; a scheduled job could mail you when a

@@ -2,6 +2,7 @@ import { Route, Routes } from 'react-router-dom';
 import { Layout } from './components/ui';
 import Home from './pages/Home';
 import Explore from './pages/Explore';
+import Identify from './pages/Identify';
 import WineDetail from './pages/WineDetail';
 import Analytics from './pages/Analytics';
 import Grapes from './pages/Grapes';
@@ -22,6 +23,7 @@ export default function App() {
       <Routes>
         <Route path="/" element={<Home />} />
         <Route path="/explore" element={<Explore />} />
+        <Route path="/identify" element={<Identify />} />
         <Route path="/wine/:id" element={<WineDetail />} />
         <Route path="/analytics" element={<Analytics />} />
         <Route path="/grapes" element={<Grapes />} />

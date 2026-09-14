@@ -186,6 +186,59 @@ CREATE TABLE descriptors (
 );
 CREATE INDEX descriptors_lookup ON descriptors(scope, key, n DESC);
 
+/*
+ * Bottle identity. A label is one wine made across many vintages — "Ponzi
+ * Reserve Pinot Noir, Willamette Valley" — which is what somebody is holding
+ * when they type a name or photograph a bottle. lookup_index is the one fuzzy
+ * index the resolver searches: catalogue wines and critic labels side by side.
+ */
+CREATE TABLE critic_labels (
+  id          INTEGER PRIMARY KEY,
+  winery      TEXT NOT NULL,
+  designation TEXT,
+  variety     TEXT,
+  grape_key   TEXT,
+  region      TEXT,
+  province    TEXT,
+  country     TEXT,
+  n           INTEGER NOT NULL,
+  vintage_min INTEGER,
+  vintage_max INTEGER,
+  points_avg  REAL,
+  points_max  INTEGER,
+  price_med   REAL,
+  price_min   REAL,
+  price_max   REAL
+);
+CREATE INDEX critic_labels_winery ON critic_labels(winery);
+CREATE INDEX critic_labels_variety ON critic_labels(grape_key);
+
+CREATE TABLE critic_label_vintages (
+  label_id  INTEGER NOT NULL,
+  vintage   INTEGER NOT NULL,
+  review_id INTEGER NOT NULL,
+  points    INTEGER,
+  price     REAL,
+  PRIMARY KEY (label_id, vintage, review_id)
+);
+CREATE INDEX critic_label_vintages_vintage ON critic_label_vintages(label_id, vintage);
+
+CREATE TABLE lookup_index (
+  id      INTEGER PRIMARY KEY,
+  kind    TEXT NOT NULL,          -- 'wine' (catalogue) | 'label' (critic corpus)
+  ref     INTEGER NOT NULL,
+  winery  TEXT,
+  name    TEXT,
+  terms   TEXT NOT NULL,          -- normalised token bag used for scoring
+  weight  REAL NOT NULL DEFAULT 1 -- prior: how much evidence backs this entry
+);
+CREATE INDEX lookup_index_kind ON lookup_index(kind, ref);
+
+CREATE VIRTUAL TABLE lookup_fts USING fts5(
+  terms,
+  tokenize = "unicode61 remove_diacritics 2"
+);
+
 CREATE VIRTUAL TABLE wines_fts USING fts5(
   name, winery, region, country, grapes, pairings,
   tokenize = "unicode61 remove_diacritics 2"
@@ -234,6 +287,24 @@ CREATE TABLE IF NOT EXISTS cellar.wishlist (
   note       TEXT,
   created_at TEXT NOT NULL DEFAULT (datetime('now'))
 );
+
+/* Live merchant prices, cached with the timestamp they were fetched. */
+CREATE TABLE IF NOT EXISTS cellar.price_quotes (
+  id          INTEGER PRIMARY KEY AUTOINCREMENT,
+  provider    TEXT NOT NULL,
+  query       TEXT NOT NULL,
+  vintage     INTEGER,
+  wine_id     INTEGER,
+  label_id    INTEGER,
+  name        TEXT,
+  merchant    TEXT,
+  price       REAL,
+  currency    TEXT,
+  url         TEXT,
+  in_stock    INTEGER,
+  fetched_at  TEXT NOT NULL DEFAULT (datetime('now'))
+);
+CREATE INDEX IF NOT EXISTS cellar.price_quotes_lookup ON price_quotes(provider, query, vintage, fetched_at DESC);
 
 CREATE TABLE IF NOT EXISTS cellar.taste_profile (
   id         INTEGER PRIMARY KEY CHECK (id = 1),

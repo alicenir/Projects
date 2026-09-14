@@ -5,6 +5,7 @@ import path from 'node:path';
 import { readCsvObjects, parsePyList, num } from './csv.js';
 import { CATALOGUE_SCHEMA } from './schema.js';
 import { extractDescriptors, grapeKey, countryCode, vintageFromTitle } from '../lib/taxonomy.js';
+import { termsFor } from '../lib/identity.js';
 
 export type BuildOptions = {
   edition: string;
@@ -48,6 +49,7 @@ export async function build(opts: BuildOptions): Promise<void> {
   let criticCount = 0;
   if (opts.criticPath) criticCount = await loadCritics(db, opts.criticPath);
 
+  buildIdentityIndex(db);
   buildProfileSimilarity(db, wines);
   buildTasteSimilarity(db, ratings);
   buildSearchIndex(db, wines);
@@ -480,6 +482,107 @@ async function loadCritics(db: Db, file: string): Promise<number> {
 
   console.log(`  critics  ${count.toLocaleString()} reviews, ${buckets.size.toLocaleString()} price/score buckets`);
   return count;
+}
+
+/* ---------------------------------------------------------- bottle identity */
+
+/**
+ * Collapse the review corpus into labels — one row per wine-across-vintages —
+ * and put every catalogue wine and every label into one fuzzy lookup index.
+ * This is what answers "I am holding this bottle, what is it?".
+ */
+function buildIdentityIndex(db: Db): void {
+  type Row = {
+    id: number; winery: string | null; wine_name: string | null; variety: string | null;
+    grape_key: string | null; region: string | null; province: string | null; country: string | null;
+    vintage: number | null; points: number | null; price: number | null;
+  };
+
+  const reviews = db
+    .prepare(`SELECT id, winery, wine_name, variety, grape_key, region, province, country, vintage, points, price
+              FROM critic_reviews WHERE winery IS NOT NULL AND winery <> ''`)
+    .all() as Row[];
+
+  type Label = {
+    winery: string; designation: string | null; variety: string | null; grape_key: string | null;
+    region: string | null; province: string | null; country: string | null;
+    points: number[]; prices: number[]; vintages: Row[];
+  };
+  const labels = new Map<string, Label>();
+
+  for (const r of reviews) {
+    const key = [r.winery, r.wine_name ?? '', r.variety ?? '', r.region ?? ''].join('|').toLowerCase();
+    let label = labels.get(key);
+    if (!label) {
+      label = {
+        winery: r.winery!, designation: r.wine_name, variety: r.variety, grape_key: r.grape_key,
+        region: r.region, province: r.province, country: r.country, points: [], prices: [], vintages: [],
+      };
+      labels.set(key, label);
+    }
+    if (r.points !== null) label.points.push(r.points);
+    if (r.price !== null) label.prices.push(r.price);
+    label.vintages.push(r);
+  }
+
+  const insLabel = db.prepare(`INSERT INTO critic_labels
+    (id, winery, designation, variety, grape_key, region, province, country, n, vintage_min, vintage_max,
+     points_avg, points_max, price_med, price_min, price_max)
+    VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`);
+  const insVintage = db.prepare(
+    'INSERT OR IGNORE INTO critic_label_vintages (label_id, vintage, review_id, points, price) VALUES (?, ?, ?, ?, ?)',
+  );
+  const insLookup = db.prepare(
+    'INSERT INTO lookup_index (id, kind, ref, winery, name, terms, weight) VALUES (?, ?, ?, ?, ?, ?, ?)',
+  );
+  const insFts = db.prepare('INSERT INTO lookup_fts (rowid, terms) VALUES (?, ?)');
+
+  const median = (values: number[]) => {
+    if (!values.length) return null;
+    const sorted = [...values].sort((a, b) => a - b);
+    return sorted[Math.floor(sorted.length / 2)];
+  };
+
+  let lookupId = 0;
+  db.transaction(() => {
+    // Catalogue wines first, so they win ties against a bare critic label.
+    const catalogue = db
+      .prepare('SELECT id, name, winery, region, country, grapes, rating_count FROM wines')
+      .all() as { id: number; name: string; winery: string; region: string; country: string; grapes: string; rating_count: number }[];
+    for (const w of catalogue) {
+      lookupId++;
+      const grapes = (JSON.parse(w.grapes || '[]') as string[]).join(' ');
+      const terms = termsFor([w.name, w.winery, w.region, w.country, grapes]);
+      insLookup.run(lookupId, 'wine', w.id, w.winery, w.name, terms, 1 + Math.log1p(w.rating_count) / 12);
+      insFts.run(lookupId, terms);
+    }
+
+    let labelId = 0;
+    for (const label of labels.values()) {
+      labelId++;
+      const years = label.vintages.map((v) => v.vintage).filter((v): v is number => v !== null);
+      insLabel.run(
+        labelId, label.winery, label.designation, label.variety, label.grape_key, label.region,
+        label.province, label.country, label.vintages.length,
+        years.length ? Math.min(...years) : null,
+        years.length ? Math.max(...years) : null,
+        label.points.length ? label.points.reduce((s, p) => s + p, 0) / label.points.length : null,
+        label.points.length ? Math.max(...label.points) : null,
+        median(label.prices),
+        label.prices.length ? Math.min(...label.prices) : null,
+        label.prices.length ? Math.max(...label.prices) : null,
+      );
+      for (const v of label.vintages) {
+        if (v.vintage !== null) insVintage.run(labelId, v.vintage, v.id, v.points, v.price);
+      }
+      lookupId++;
+      const terms = termsFor([label.winery, label.designation, label.variety, label.region, label.province, label.country]);
+      insLookup.run(lookupId, 'label', labelId, label.winery, label.designation ?? label.variety, terms, 1 + Math.log1p(label.vintages.length) / 12);
+      insFts.run(lookupId, terms);
+    }
+  })();
+
+  console.log(`  identity ${labels.size.toLocaleString()} critic labels, ${lookupId.toLocaleString()} searchable identities`);
 }
 
 /* -------------------------------------------------------------- neighbours */

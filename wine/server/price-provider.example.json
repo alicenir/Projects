@@ -1,0 +1,26 @@
+{
+  "_comment": [
+    "Point Terroir at any JSON catalogue or price API. Copy this file to",
+    "data/price-provider.json, fill in the url, headers and field paths, and",
+    "restart the server. {query} and {vintage} are substituted into the url;",
+    "${ENV_VAR} is read from the environment so keys stay out of the file.",
+    "The example below is shaped for a typical merchant search endpoint."
+  ],
+  "name": "my-merchant",
+  "url": "https://api.example.com/v1/products?search={query}&vintage={vintage}",
+  "method": "GET",
+  "headers": { "Ocp-Apim-Subscription-Key": "${MERCHANT_API_KEY}" },
+  "resultsPath": "data.products",
+  "fields": {
+    "name": "name",
+    "price": "price.amount",
+    "currency": "price.currency",
+    "url": "links.self",
+    "merchant": "=My Merchant",
+    "inStock": "availability.inStock",
+    "vintage": "vintage"
+  },
+  "currency": "EUR",
+  "ttlMinutes": 720,
+  "timeoutMs": 8000
+}
