@@ -66,7 +66,7 @@ export default function Home() {
       <section>
         <SectionTitle title="The dataset at a glance" hint={`Ratings collected ${s.first_rating?.slice(0, 4)}–${s.last_rating?.slice(0, 4)}.`} />
         <div className="grid grid-cols-2 gap-3 md:grid-cols-3 xl:grid-cols-6">
-          <StatTile label="Wines" value={compact(s.wines)} note={`${s.wineries.toLocaleString()} producers`} />
+          <StatTile label="Wines" value={s.wines.toLocaleString()} note={`${s.wineries.toLocaleString()} producers`} />
           <StatTile label="Ratings" value={compact(s.ratings)} note={`${compact(s.tasters)} tasters`} />
           <StatTile label="Average score" value={num(s.avg_rating, 2)} note="out of 5 stars" />
           <StatTile label="Countries" value={String(s.countries)} note={`${s.regions} regions`} />
