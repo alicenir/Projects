@@ -119,9 +119,10 @@ proxied by, or stored on the server.
 
 1. In Portainer, go to **Stacks → Add stack**, name it `tesla-wrap-studio`, and choose
    **Repository** as the build method.
-2. **Repository URL**: `https://github.com/<your-user>/<your-repo>`
-3. **Repository reference**: `refs/heads/<your-branch>` — Portainer wants the full ref,
-   not just the branch name.
+2. **Repository URL**: `https://github.com/alicenir/Projects`
+3. **Repository reference**: `refs/heads/tesla-wrap-studio` — the production branch
+   for this app. Portainer wants the full ref, not just the branch name. (`main` holds
+   a different project, so don't point this stack at it.)
 4. **Compose path**: `docker-compose.yml`
 5. If the repository is private, switch on **Authentication** and use your GitHub
    username with a [personal access token](https://github.com/settings/tokens) (scope
@@ -140,10 +141,6 @@ another and redeploy. To see what's taken, SSH into the NAS and run
 `netstat -tuln | grep LISTEN` (or `docker ps` to check other containers).
 
 To pick up later changes, open the stack in Portainer and use **Pull and redeploy**.
-
-If saving fails with a permissions error, the container (running as root by default)
-can't write to that share — check the share's permissions, or add a `user:` mapping to
-the service matching the owner of the folder.
 
 ### Running the server without Docker
 
