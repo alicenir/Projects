@@ -4,6 +4,9 @@ services:
       context: .
       dockerfile: Dockerfile
     image: tesla-wrap-studio:latest
+    # Always rebuild from the checked-out source on deploy. Without this, Portainer
+    # reuses an existing tesla-wrap-studio:latest image and new code never ships.
+    pull_policy: build
     container_name: tesla-wrap-studio
     # Host port is overridable: set WRAP_PORT in a .env file, or in Portainer's
     # "Environment variables" box on the stack, without editing this file.
