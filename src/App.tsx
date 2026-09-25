@@ -15,7 +15,8 @@ import { TEXT_PLACEMENTS, type TextPlacementId } from './data/textPlacements'
 import { DEFAULT_BRIEF, briefToPrompt, type BriefAnswers } from './data/conceptBrief'
 import { buildWrapPrompt, buildConceptPrompt, buildMockupPrompt, buildPortPrompt } from './lib/promptBuilder'
 import { flattenOnColor, splitDataUrl } from './lib/mockup'
-import { generateWrapImage, generateConceptText } from './lib/gemini'
+import { generateWrapImage, generateConceptText, AccountLevelError } from './lib/gemini'
+import { buildZip, dataUrlToBytes } from './lib/zip'
 import { normalizeToWrapSpec, buildWrapFilename } from './lib/imageSpec'
 import { fetchImageAsset, type FetchedImage } from './lib/templateAssets'
 import { maskToPanels, findHoodPanel, rotateHoodInSource, type HoodPanel } from './lib/panelMask'
@@ -87,12 +88,17 @@ export default function App() {
   const [mockup, setMockup] = useState<MockupState>(EMPTY_MOCKUP)
   const [hoodRotation, setHoodRotation] = useState<HoodRotation>(0)
   const [ports, setPorts] = useState<Record<string, PortedWrap>>({})
+  const [portAll, setPortAll] = useState<{ done: number; total: number } | null>(null)
   const [briefOpen, setBriefOpen] = useState(false)
   const [brief, setBrief] = useState<BriefAnswers>(DEFAULT_BRIEF)
 
   const templateCache = useRef<Map<string, FetchedImage>>(new Map())
   const hoodCache = useRef<Map<string, HoodPanel | null>>(new Map())
   const vehicleCache = useRef<Map<string, FetchedImage>>(new Map())
+  // Bumped whenever the source wrap is replaced, so in-flight ports of the old
+  // design are dropped instead of landing next to the new one.
+  const portEpoch = useRef(0)
+  const portAllStop = useRef(false)
 
   useEffect(() => {
     localStorage.setItem(LS_KEY, JSON.stringify(prefs))
@@ -155,6 +161,8 @@ export default function App() {
     // Any existing mockup or ported copy belongs to the previous wrap.
     setMockup(EMPTY_MOCKUP)
     setPorts({})
+    portEpoch.current++
+    portAllStop.current = true
     setGeneration({ status: 'loading-image' })
     try {
       const basePrompt = buildWrapPrompt({
@@ -318,12 +326,19 @@ export default function App() {
     void renderAngle(next)
   }
 
-  /** Redraws the current wrap onto another vehicle's template. */
-  async function handlePortToModel(targetId: string) {
+  /**
+   * Redraws the current wrap onto another vehicle's template. Records the outcome
+   * in `ports` and rethrows, so batch callers can react to the failure.
+   */
+  async function portToModel(targetId: string) {
     const target = TESLA_MODELS.find((m) => m.id === targetId)
     if (!target || !generation.dataUrl) return
+    const epoch = portEpoch.current
+    const update = (port: PortedWrap) => {
+      if (epoch === portEpoch.current) setPorts((p) => ({ ...p, [targetId]: port }))
+    }
 
-    setPorts((p) => ({ ...p, [targetId]: { status: 'loading' } }))
+    update({ status: 'loading' })
     try {
       let template = templateCache.current.get(target.id)
       if (!template) {
@@ -348,22 +363,79 @@ export default function App() {
       const masked = await maskToPanels(raw.dataUrl, template.objectUrl)
       const normalized = await normalizeToWrapSpec(masked.dataUrl, template.width, template.height)
 
-      setPorts((p) => ({
-        ...p,
-        [targetId]: {
-          status: 'done',
-          dataUrl: normalized.dataUrl,
-          width: normalized.width,
-          height: normalized.height,
-          sizeBytes: normalized.sizeBytes,
-        },
-      }))
+      update({
+        status: 'done',
+        dataUrl: normalized.dataUrl,
+        width: normalized.width,
+        height: normalized.height,
+        sizeBytes: normalized.sizeBytes,
+      })
     } catch (err) {
-      setPorts((p) => ({
-        ...p,
-        [targetId]: { status: 'error', error: err instanceof Error ? err.message : 'Could not port the design.' },
-      }))
+      update({ status: 'error', error: err instanceof Error ? err.message : 'Could not port the design.' })
+      throw err
     }
+  }
+
+  function handlePortToModel(targetId: string) {
+    portToModel(targetId).catch(() => {
+      // Already shown on that model's card.
+    })
+  }
+
+  /**
+   * Ports the design to every other vehicle, one at a time — parallel calls would
+   * just trip the per-minute rate limit. Models already done are skipped, so this
+   * also resumes after a stop or a quota error.
+   */
+  async function handlePortToAll() {
+    const epoch = portEpoch.current
+    const queue = TESLA_MODELS.filter((m) => m.id !== model.id && ports[m.id]?.status !== 'done')
+    if (queue.length === 0) return
+
+    portAllStop.current = false
+    setPortAll({ done: 0, total: queue.length })
+    for (const [i, target] of queue.entries()) {
+      if (portAllStop.current || epoch !== portEpoch.current) break
+      try {
+        await portToModel(target.id)
+      } catch (err) {
+        // Quota, key and retired-model errors would fail every remaining model too.
+        if (err instanceof AccountLevelError) break
+      }
+      setPortAll({ done: i + 1, total: queue.length })
+    }
+    if (epoch === portEpoch.current) setPortAll(null)
+  }
+
+  function handleStopPortAll() {
+    portAllStop.current = true
+  }
+
+  function handleDownloadAll() {
+    if (!generation.dataUrl) return
+    const description = prefs.description || 'wrap'
+    const entries = [{ model, dataUrl: generation.dataUrl }]
+    for (const m of TESLA_MODELS) {
+      const dataUrl = ports[m.id]?.status === 'done' ? ports[m.id].dataUrl : undefined
+      if (dataUrl && m.id !== model.id) entries.push({ model: m, dataUrl })
+    }
+
+    const zip = buildZip(
+      entries.map(({ model: m, dataUrl }) => ({
+        // One folder per vehicle — the filenames alone don't say which car each fits.
+        name: `${m.name}${m.subtitle ? ` - ${m.subtitle}` : ''}/${buildWrapFilename(description)}.png`.replace(
+          /[\\:*?"<>|]/g,
+          '',
+        ),
+        data: dataUrlToBytes(dataUrl),
+      })),
+    )
+    const url = URL.createObjectURL(zip)
+    const a = document.createElement('a')
+    a.href = url
+    a.download = `${buildWrapFilename(`${description} all models`)}.zip`
+    a.click()
+    setTimeout(() => URL.revokeObjectURL(url), 10_000)
   }
 
   function handlePortDownload(targetId: string) {
@@ -452,8 +524,12 @@ export default function App() {
             sourceModel={model}
             ports={ports}
             busy={Object.values(ports).some((p) => p.status === 'loading')}
+            portAll={portAll}
             onPort={handlePortToModel}
+            onPortAll={handlePortToAll}
+            onStopPortAll={handleStopPortAll}
             onDownload={handlePortDownload}
+            onDownloadAll={handleDownloadAll}
           />
         )}
 

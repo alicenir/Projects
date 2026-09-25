@@ -1,5 +1,12 @@
 import { GEMINI_IMAGE_MODELS } from '../data/geminiModels'
 
+/**
+ * A failure that will repeat for every request with the same key and model —
+ * quota exhausted, key rejected, model retired — as opposed to one bad image.
+ * Batch work stops on it instead of burning through the rest of the queue.
+ */
+export class AccountLevelError extends Error {}
+
 export interface GeminiImageResult {
   dataUrl: string
   mimeType: string
@@ -109,15 +116,15 @@ async function callGenerateContent(
     }
 
     if (res.status === 429) {
-      throw new Error(explainQuotaError(modelId, detail))
+      throw new AccountLevelError(explainQuotaError(modelId, detail))
     }
     if (res.status === 404 && /no longer available|not found|not supported/i.test(detail)) {
-      throw new Error(
+      throw new AccountLevelError(
         `Google has retired "${modelId}", so this request was rejected. Pick a different model in the dropdown at the top — if they're all failing, Google has moved on and the model list in src/data/geminiModels.ts needs updating.`,
       )
     }
     if (res.status === 400 && /api key/i.test(detail)) {
-      throw new Error('That API key was rejected. Check it was copied in full from aistudio.google.com/apikey.')
+      throw new AccountLevelError('That API key was rejected. Check it was copied in full from aistudio.google.com/apikey.')
     }
     throw new Error(`Gemini API error (${res.status}): ${detail || res.statusText}`)
   }

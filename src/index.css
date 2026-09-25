@@ -475,6 +475,11 @@ textarea {
   flex: 1;
 }
 
+.port-all {
+  margin-bottom: 6px;
+  flex-wrap: wrap;
+}
+
 .spinner {
   width: 28px;
   height: 28px;
@@ -499,6 +504,25 @@ textarea {
 
 .port-thumb {
   aspect-ratio: 1 / 1;
+}
+
+.library-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(170px, 1fr));
+  gap: 12px;
+  margin-top: 12px;
+}
+
+.library-card {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  min-width: 0;
+}
+
+.library-card .panel-actions {
+  margin-top: auto;
+  padding-top: 4px;
 }
 
 .dialog-backdrop {

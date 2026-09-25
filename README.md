@@ -27,6 +27,12 @@ Not affiliated with or endorsed by Tesla, Inc.
    writing the brief yourself.
 5. **Preview window** shows Tesla's official blank template next to your generated
    result, and lets you download it as a spec-compliant PNG.
+6. **Use it on every other Tesla.** Once you like a wrap, redraw it onto another
+   vehicle's template, or press **Redraw for all models** to do the remaining 11 in
+   one go. They run one at a time. **Download all (.zip)** bundles every finished
+   wrap with one folder per vehicle. A quota or API-key error stops the batch
+   instead of failing each remaining model in turn, and pressing the button again
+   later picks up where it left off.
 
 ## How generation actually works
 
