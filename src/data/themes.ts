@@ -1,15 +1,72 @@
 export interface WrapTheme {
   id: string
   label: string
+  /** How the category reads inside a prompt, when the label doesn't ("a supercar themed wrap"). */
+  promptLabel?: string
   examples: string[]
 }
 
 export const WRAP_THEMES: WrapTheme[] = [
   {
+    // First on purpose: the most-asked-for look is a Tesla dressed as a supercar.
+    id: 'supercars',
+    label: 'Supercars & Sports Cars',
+    promptLabel: 'supercar',
+    examples: [
+      'Ferrari Rosso Corsa with yellow shield accents',
+      'Lamborghini Verde Mantis with hexagon motifs',
+      'Porsche 911 GT3 RS in Python Green',
+      'Porsche 917 Salzburg red and white livery',
+      'Porsche Rothmans rally livery',
+      'McLaren papaya orange',
+      'McLaren F1 GTR Harrods livery',
+      'Bugatti Chiron two-tone blue',
+      'Koenigsegg Jesko carbon and silver',
+      'Pagani exposed carbon weave with gold pinstripes',
+      'Ford GT40 Gulf Le Mans livery',
+      'Shelby Cobra twin racing stripes',
+      'Aston Martin Racing green and lime',
+      'BMW M Motorsport tricolour stripes',
+      'BMW Art Car pop-art livery',
+      'Mercedes-AMG Silver Arrows',
+      'Lotus JPS black and gold',
+      'Nissan GT-R Nismo red and black',
+      'Toyota GR Supra Castrol livery',
+      'Rimac Nevera electric blue',
+    ],
+  },
+  {
+    id: 'motorsport',
+    label: 'Motorsport & Racing',
+    examples: [
+      'Formula 1 team livery',
+      'Red Bull Racing matte navy and red',
+      'Ferrari F1 scarlet and white',
+      'McLaren F1 papaya and blue',
+      'Formula E electric livery',
+      'Le Mans racing livery',
+      'Rally stripes',
+      'Dakar Rally desert livery',
+      'Pikes Peak hill climb livery',
+      'Gymkhana drift livery',
+      'Gulf racing blue and orange',
+      'Martini racing stripes',
+      'NASCAR livery',
+      'Racing number roundels',
+      'Japanese drift livery',
+    ],
+  },
+  {
     id: 'gaming',
     label: 'Gaming',
     examples: [
+      'Grand Theft Auto VI',
+      'Forza Horizon',
+      'Gran Turismo',
       'Cyberpunk 2077',
+      'Hollow Knight: Silksong',
+      'Death Stranding 2',
+      'Ghost of Yōtei',
       'Halo',
       'The Legend of Zelda',
       'Fortnite',
@@ -25,6 +82,12 @@ export const WRAP_THEMES: WrapTheme[] = [
     id: 'movies',
     label: 'Movies',
     examples: [
+      'F1 The Movie',
+      'Dune',
+      'Tron: Ares',
+      'Avatar',
+      'Superman',
+      'Spider-Man: Across the Spider-Verse',
       'Star Wars',
       'Blade Runner',
       'Tron',
@@ -41,6 +104,13 @@ export const WRAP_THEMES: WrapTheme[] = [
     id: 'tv',
     label: 'TV Shows',
     examples: [
+      'Arcane',
+      'The Last of Us',
+      'Fallout',
+      'Severance',
+      'Wednesday',
+      'Andor',
+      'Shōgun',
       'Stranger Things',
       'Breaking Bad',
       'The Mandalorian',
@@ -55,6 +125,12 @@ export const WRAP_THEMES: WrapTheme[] = [
     id: 'anime',
     label: 'Anime & Comics',
     examples: [
+      'Jujutsu Kaisen',
+      'Chainsaw Man',
+      'Solo Leveling',
+      'Frieren',
+      'Attack on Titan',
+      'Initial D',
       'Akira',
       'Ghost in the Shell',
       'Dragon Ball',
@@ -68,17 +144,42 @@ export const WRAP_THEMES: WrapTheme[] = [
     ],
   },
   {
-    id: 'motorsport',
-    label: 'Motorsport & Racing',
+    id: 'jdm',
+    label: 'JDM & Street',
     examples: [
-      'Formula 1 team livery',
-      'Le Mans racing livery',
-      'Rally stripes',
-      'Gulf racing blue and orange',
-      'Martini racing stripes',
-      'NASCAR livery',
-      'Racing number roundels',
-      'Japanese drift livery',
+      'Tokyo neon night streets',
+      'Itasha anime livery',
+      'Koi fish and waves (irezumi style)',
+      'Cherry blossom and torii gates',
+      'Bōsōzoku kanji and rising sun rays',
+      'Underground street racing decals',
+      'Hot Wheels flames',
+    ],
+  },
+  {
+    id: 'space',
+    label: 'Space & Sci-Fi',
+    examples: [
+      'Starship launch at dawn',
+      'Mars colony and red dunes',
+      'NASA worm logo retro livery',
+      'Apollo moon landing',
+      'Astronaut floating over Earth',
+      'Black hole accretion disk',
+      'Sci-fi hard-surface panel lines',
+    ],
+  },
+  {
+    id: 'luxury',
+    label: 'Luxury & Stealth',
+    examples: [
+      'Satin black with gloss black pinstripes',
+      'Brushed gold and black',
+      'Rose gold chrome',
+      'Pearlescent colour-shift',
+      'Stealth fighter jet matte grey',
+      'Digital urban camo',
+      'Forged carbon',
     ],
   },
   {
@@ -111,7 +212,6 @@ export const WRAP_THEMES: WrapTheme[] = [
       'Psychedelic 1970s swirls',
     ],
   },
-  { id: 'custom', label: 'Custom', examples: [] },
 ]
 
 export type WrapIntensity = 'subtle' | 'balanced' | 'bold'

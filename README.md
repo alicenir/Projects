@@ -17,10 +17,13 @@ Not affiliated with or endorsed by Tesla, Inc.
    Blue, Deep Blue Metallic, Pearl White Multi-Coat, Solid Black, Diamond Black,
    Stealth Grey, Quicksilver, Ultra Red, or a custom color — every generated wrap is
    prompted to harmonize with it instead of clashing.
-3. **Describe the wrap you want** in a long-form prompt box (up to 4000 characters),
-   with one-click category chips (Gaming, Movies, TV Shows, Anime & Comics, Motorsport,
-   Nature & Abstract) and franchise examples to jump-start ideas, plus a coverage
-   intensity control (subtle / balanced / bold).
+3. **Describe the wrap you want** in a long-form prompt box (up to 4000 characters).
+   A theme picker jump-starts ideas. It leads with Supercars & Sports Cars (iconic
+   Ferrari, Lamborghini, Porsche, McLaren, Bugatti liveries and more), then Motorsport,
+   Gaming, Movies, TV Shows, Anime & Comics, JDM & Street, Space & Sci-Fi, Luxury &
+   Stealth, Nature & Abstract, and Retro & Graphic. You can also type your own theme.
+   Optional custom lettering can go on the doors, hood or rear. A coverage intensity
+   control sets how busy the design is (subtle / balanced / bold).
 4. **Generate Wrap** uses your description as-is. **✨ AI Wrap Generation** invents a
    full creative concept for you (optionally steered by whatever you've already typed)
    and generates it immediately — for when you just want something great without

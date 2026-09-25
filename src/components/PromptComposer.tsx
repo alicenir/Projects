@@ -1,3 +1,4 @@
+import { useState } from 'react'
 import { WRAP_THEMES, WRAP_INTENSITIES, type WrapIntensity } from '../data/themes'
 import { TEXT_PLACEMENTS, type TextPlacementId } from '../data/textPlacements'
 
@@ -25,6 +26,15 @@ export function PromptComposer({
   onCustomTextChange,
   onCustomTextPlacementChange,
 }: Props) {
+  const [customTheme, setCustomTheme] = useState('')
+
+  function addCustomTheme() {
+    const theme = customTheme.trim()
+    if (!theme) return
+    addTitle(theme)
+    setCustomTheme('')
+  }
+
   function addTitle(title: string) {
     if (!title) return
     // Only the first pick needs to set the scene; later ones just name another
@@ -34,7 +44,11 @@ export function PromptComposer({
       return
     }
     const category = WRAP_THEMES.find((t) => t.examples.includes(title))
-    const label = category?.label.toLowerCase() ?? 'custom'
+    if (!category) {
+      insertIdea(`A wrap themed around "${title}"`)
+      return
+    }
+    const label = category.promptLabel ?? category.label.toLowerCase()
     const article = /^[aeiou]/i.test(label) ? 'An' : 'A'
     insertIdea(`${article} ${label} themed wrap inspired by "${title}"`)
   }
@@ -68,7 +82,7 @@ export function PromptComposer({
         */}
         <select value="" onChange={(e) => addTitle(e.target.value)}>
           <option value="">Choose a theme…</option>
-          {WRAP_THEMES.filter((t) => t.examples.length > 0).map((t) => (
+          {WRAP_THEMES.map((t) => (
             <optgroup key={t.id} label={t.label}>
               {t.examples.map((ex) => (
                 <option key={ex} value={ex}>
@@ -79,6 +93,28 @@ export function PromptComposer({
           ))}
         </select>
       </label>
+
+      <div className="field">
+        <span>Or type your own theme</span>
+        <div className="key-input">
+          <input
+            type="text"
+            value={customTheme}
+            maxLength={120}
+            onChange={(e) => setCustomTheme(e.target.value)}
+            onKeyDown={(e) => {
+              if (e.key === 'Enter') {
+                e.preventDefault()
+                addCustomTheme()
+              }
+            }}
+            placeholder="e.g. Porsche 956 Rothmans, The Boys, Van Gogh's Starry Night…"
+          />
+          <button type="button" className="ghost-btn" disabled={!customTheme.trim()} onClick={addCustomTheme}>
+            Add
+          </button>
+        </div>
+      </div>
 
       <div className="field">
         <div className="field-header">
