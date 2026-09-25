@@ -10,12 +10,15 @@ import { TESLA_MODELS } from './data/models'
 import { TESLA_COLORS } from './data/colors'
 import { type WrapIntensity } from './data/themes'
 import { GEMINI_IMAGE_MODELS, GEMINI_TEXT_MODELS } from './data/geminiModels'
+import { GROK_IMAGE_MODELS, GROK_TEXT_MODELS } from './data/grokModels'
 import { VIEW_ANGLES } from './data/viewAngles'
 import { TEXT_PLACEMENTS, type TextPlacementId } from './data/textPlacements'
 import { DEFAULT_BRIEF, briefToPrompt, type BriefAnswers } from './data/conceptBrief'
 import { buildWrapPrompt, buildConceptPrompt, buildMockupPrompt, buildPortPrompt } from './lib/promptBuilder'
 import { flattenOnColor, splitDataUrl } from './lib/mockup'
-import { generateWrapImage, generateConceptText, AccountLevelError } from './lib/gemini'
+import { AccountLevelError } from './lib/gemini'
+import { aspectRatioFor } from './lib/grok'
+import { activeKey, generateImage, generateConcept, type Provider } from './lib/imageProvider'
 import { buildZip, dataUrlToBytes } from './lib/zip'
 import { normalizeToWrapSpec, buildWrapFilename } from './lib/imageSpec'
 import { fetchImageAsset, type FetchedImage } from './lib/templateAssets'
@@ -30,9 +33,13 @@ const BLANK_PANEL_CORRECTION =
   'RETRY — your previous attempt left an entire panel white and unpainted, most likely the large hood panel near the top centre. Paint over EVERY part of the image this time, especially that large top-centre panel, and keep the focal subject on it facing the TOP EDGE of the image. No region of the output may be white, blank or unpainted.'
 
 interface PersistedPrefs {
+  provider: Provider
   apiKey: string
   geminiModelId: string
   geminiTextModelId: string
+  xaiKey: string
+  grokModelId: string
+  grokTextModelId: string
   modelId: string
   colorId: string
   customHex: string
@@ -56,6 +63,12 @@ function loadPrefs(): PersistedPrefs {
       if (!GEMINI_TEXT_MODELS.some((m) => m.id === stored.geminiTextModelId)) {
         stored.geminiTextModelId = GEMINI_TEXT_MODELS[0].id
       }
+      if (!GROK_IMAGE_MODELS.some((m) => m.id === stored.grokModelId)) {
+        stored.grokModelId = GROK_IMAGE_MODELS[0].id
+      }
+      if (!GROK_TEXT_MODELS.some((m) => m.id === stored.grokTextModelId)) {
+        stored.grokTextModelId = GROK_TEXT_MODELS[0].id
+      }
       return stored
     }
   } catch {
@@ -66,9 +79,13 @@ function loadPrefs(): PersistedPrefs {
 
 function defaultPrefs(): PersistedPrefs {
   return {
+    provider: 'gemini',
     apiKey: '',
     geminiModelId: GEMINI_IMAGE_MODELS[0].id,
     geminiTextModelId: GEMINI_TEXT_MODELS[0].id,
+    xaiKey: '',
+    grokModelId: GROK_IMAGE_MODELS[0].id,
+    grokTextModelId: GROK_TEXT_MODELS[0].id,
     modelId: TESLA_MODELS[0].id,
     colorId: TESLA_COLORS[0].id,
     customHex: '#8A8D90',
@@ -137,13 +154,16 @@ export default function App() {
     }
   }, [model.id, model.templateUrl])
 
-  const canGenerate = prefs.apiKey.trim().length > 0 && Boolean(templateUrl) && !templateError
+  const canGenerate = activeKey(prefs).length > 0 && Boolean(templateUrl) && !templateError
   const hasDescription = prefs.description.trim().length > 0
 
   async function generateAndMask(prompt: string, template: FetchedImage) {
-    const raw = await generateWrapImage(prefs.apiKey.trim(), prefs.geminiModelId, prompt, [
-      { base64: template.base64, mimeType: template.mimeType },
-    ])
+    const raw = await generateImage(
+      prefs,
+      prompt,
+      [{ base64: template.base64, mimeType: template.mimeType }],
+      aspectRatioFor(template.width, template.height),
+    )
     // Clip to the template's real panels so nothing can land on the glass roof or
     // the background, whatever the model actually drew.
     const masked = await maskToPanels(raw.dataUrl, template.objectUrl)
@@ -219,7 +239,7 @@ export default function App() {
         themeHint: prefs.description.trim() || undefined,
         brief: briefToPrompt(brief),
       })
-      const concept = await generateConceptText(prefs.apiKey.trim(), prefs.geminiTextModelId, conceptPrompt)
+      const concept = await generateConcept(prefs, conceptPrompt)
       setPrefs((p) => ({ ...p, description: concept }))
       await runImageGeneration(concept)
     } catch (err) {
@@ -292,9 +312,8 @@ export default function App() {
         vehicleCache.current.set(model.id, vehicle)
       }
 
-      const result = await generateWrapImage(
-        prefs.apiKey.trim(),
-        prefs.geminiModelId,
+      const result = await generateImage(
+        prefs,
         buildMockupPrompt({ model, colorName, anglePrompt: VIEW_ANGLES[index].prompt }),
         // Vehicle reference first: the leading image anchors what is being drawn,
         // and burying it behind the wrap let the model default to a more familiar
@@ -351,14 +370,14 @@ export default function App() {
       const flattened = await flattenOnColor(generation.dataUrl, colorHex)
       const source = splitDataUrl(flattened)
 
-      const raw = await generateWrapImage(
-        prefs.apiKey.trim(),
-        prefs.geminiModelId,
+      const raw = await generateImage(
+        prefs,
         buildPortPrompt({ target, colorHex, colorName }),
         [
           { base64: source.base64, mimeType: source.mimeType },
           { base64: template.base64, mimeType: template.mimeType },
         ],
+        aspectRatioFor(template.width, template.height),
       )
       const masked = await maskToPanels(raw.dataUrl, template.objectUrl)
       const normalized = await normalizeToWrapSpec(masked.dataUrl, template.width, template.height)
@@ -471,12 +490,8 @@ export default function App() {
 
       <main className="app-main">
         <ApiKeyInput
-          apiKey={prefs.apiKey}
-          onApiKeyChange={(apiKey) => setPrefs((p) => ({ ...p, apiKey }))}
-          modelId={prefs.geminiModelId}
-          onModelChange={(geminiModelId) => setPrefs((p) => ({ ...p, geminiModelId }))}
-          textModelId={prefs.geminiTextModelId}
-          onTextModelChange={(geminiTextModelId) => setPrefs((p) => ({ ...p, geminiTextModelId }))}
+          settings={prefs}
+          onChange={(patch) => setPrefs((p) => ({ ...p, ...patch }))}
         />
 
         <ModelSelector selectedId={prefs.modelId} onSelect={(modelId) => setPrefs((p) => ({ ...p, modelId }))} />

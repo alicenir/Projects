@@ -56,12 +56,26 @@ This makes two of the trickier requirements structural instead of just prompted:
   part is still prompt-based, since it lives inside a single generated image rather
   than being a separate structural panel.
 
-## Why Gemini, not Claude
+## Image providers: Gemini or Grok
 
-Claude's API doesn't generate images (text and vision-input only), so this app calls
-Gemini's image models directly from the browser: an image-editing model (the
-`gemini-*-image` family, aka "Nano Banana") for the wrap itself, and a fast text model
-for inventing concepts when you use "AI Wrap Generation" with an empty prompt.
+Claude's API doesn't generate images (text and vision-input only), so section 1 lets you
+pick one of two image providers. Everything goes through the provider you pick: the wrap
+itself, "AI Wrap Generation" concepts, the on-car preview, and redraws for other models.
+
+- **Google Gemini** (default): the `gemini-*-image` family ("Nano Banana") plus a Gemini
+  text model for concepts. It has a free tier. Calls go straight from your browser to
+  Google.
+- **xAI Grok**: `grok-imagine-image-2.0` via xAI's `/v1/images/edits` endpoint, which
+  takes the template as an input image, plus `grok-4.7` for concepts. There's no free
+  tier; get a key and add credits at [console.x.ai](https://console.x.ai). It costs
+  roughly $0.04–0.06 per image plus $0.01 per input image. The requested aspect ratio
+  matches each template, so Cybertruck's 4:3 layout isn't squashed into a square.
+
+xAI's API can't be called straight from a browser, so Grok requests go through this app's
+own server (`/api/xai/...` in [`server/index.js`](server/index.js)). The server forwards
+your key to `api.x.ai` with each request and never stores or logs it. It only relays the
+image-edit, image-generation and chat endpoints. This means **Grok needs the Docker or
+`npm run server` version of the app**, not a static-only build.
 
 ## Running it locally
 
@@ -71,10 +85,11 @@ npm run dev
 ```
 
 Then open the printed local URL. You'll need a free Gemini API key from
-[aistudio.google.com/apikey](https://aistudio.google.com/apikey) — paste it into the
-"Connect your Gemini API key" box. The key is stored only in your browser's
-`localStorage` and is sent directly to Google's API; this project has no backend and
-never sees or stores your key.
+[aistudio.google.com/apikey](https://aistudio.google.com/apikey), or an xAI key for
+Grok. Paste it into the "Connect your image AI" box. Keys are stored only in your
+browser's `localStorage`. Gemini keys go straight to Google. Grok keys pass through
+this app's server on their way to xAI (see above), so for Grok also run
+`npm run server` alongside `npm run dev`.
 
 **Heads up:** because API calls go straight from the browser, your key is visible in
 that browser's network requests. That's fine for local/personal use, but don't deploy
@@ -111,9 +126,10 @@ production dependencies only (no Vite, no TypeScript) and runs a small Express s
 to serve the built app. Both stages are multi-arch, so this works on x86 and ARM alike
 — most NAS hardware, Raspberry Pi, Apple Silicon.
 
-No build-time configuration or secrets are needed. Your Gemini key is entered in the
-browser at runtime and stored in that browser's `localStorage`; it is never sent to,
-proxied by, or stored on the server.
+No build-time configuration or secrets are needed. API keys are entered in the browser
+at runtime and stored in that browser's `localStorage`. A Gemini key never touches the
+server. A Grok key is relayed through it to xAI with each request but never stored.
+The container needs outbound internet access to `api.x.ai` for Grok.
 
 ### Deploying on a NAS with Portainer
 
