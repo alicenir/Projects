@@ -124,6 +124,22 @@ export interface MockupPromptInput {
   colorName: string
   /** Camera description from VIEW_ANGLES. */
   anglePrompt: string
+  /** Whether to fit a rear spoiler; undefined leaves the car as the reference shows it. */
+  spoiler?: boolean
+}
+
+function spoilerInstruction(model: TeslaModel, spoiler: boolean | undefined): string {
+  if (spoiler === undefined) return ''
+  if (!spoiler) {
+    return 'NO REAR SPOILER: the trailing edge of the trunk lid / tailgate is smooth and plain. Do not add any spoiler, wing or lip there, even if the reference render shows one.'
+  }
+  return [
+    'REAR SPOILER — REQUIRED: fit a slim rear lip spoiler along the trailing edge of the trunk lid / tailgate,',
+    model.spoiler === 'factory'
+      ? `exactly like the factory carbon-fibre spoiler this ${model.name}${model.subtitle ? ` ${model.subtitle}` : ''} ships with.`
+      : "in the style of the factory carbon-fibre spoiler on Tesla's Performance models.",
+    'It is bare gloss carbon fibre with a visible weave: NOT wrapped, NOT painted and NOT covered by the design. Keep it low and integrated, not a tall race wing, and make it clearly visible whenever the rear of the car is in view.',
+  ].join(' ')
 }
 
 /**
@@ -149,8 +165,12 @@ export function buildMockupPrompt(input: MockupPromptInput): string {
 
     'The panoramic roof is tinted glass and must stay dark glass — never wrapped or painted. Windows stay glass, and the tyres, badges and lights stay realistic.',
 
+    spoilerInstruction(input.model, input.spoiler),
+
     'No text overlays, no watermarks, no colour swatches or design-layout diagrams — just the finished car.',
-  ].join(' ')
+  ]
+    .filter(Boolean)
+    .join(' ')
 }
 
 export interface ConceptPromptInput {

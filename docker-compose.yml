@@ -3,11 +3,12 @@ services:
     build:
       context: .
       dockerfile: Dockerfile
-    image: tesla-wrap-studio:latest
+    # Override WRAP_NAME to run a second (e.g. test) stack beside production.
+    image: ${WRAP_NAME:-tesla-wrap-studio}:latest
     # Always rebuild from the checked-out source on deploy. Without this, Portainer
     # reuses an existing tesla-wrap-studio:latest image and new code never ships.
     pull_policy: build
-    container_name: tesla-wrap-studio
+    container_name: ${WRAP_NAME:-tesla-wrap-studio}
     # Host port is overridable: set WRAP_PORT in a .env file, or in Portainer's
     # "Environment variables" box on the stack, without editing this file.
     ports:

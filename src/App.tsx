@@ -104,6 +104,8 @@ export default function App() {
   const [templateError, setTemplateError] = useState<string | null>(null)
   const [mockup, setMockup] = useState<MockupState>(EMPTY_MOCKUP)
   const [hoodRotation, setHoodRotation] = useState<HoodRotation>(0)
+  // null follows the model's default: on for variants with a factory spoiler.
+  const [spoilerChoice, setSpoilerChoice] = useState<boolean | null>(null)
   const [ports, setPorts] = useState<Record<string, PortedWrap>>({})
   const [portAll, setPortAll] = useState<{ done: number; total: number } | null>(null)
   const [briefOpen, setBriefOpen] = useState(false)
@@ -153,6 +155,12 @@ export default function App() {
       cancelled = true
     }
   }, [model.id, model.templateUrl])
+
+  const spoiler = model.spoiler === 'none' ? undefined : (spoilerChoice ?? model.spoiler === 'factory')
+
+  useEffect(() => {
+    setSpoilerChoice(null)
+  }, [model.id])
 
   const canGenerate = activeKey(prefs).length > 0 && Boolean(templateUrl) && !templateError
   const hasDescription = prefs.description.trim().length > 0
@@ -288,15 +296,25 @@ export default function App() {
     }
   }
 
-  /** Renders one turntable angle. Cached angles are reused, so only new ones cost a call. */
-  async function renderAngle(index: number) {
+  /**
+   * Renders one turntable angle. Cached angles are reused, so only new ones cost a
+   * call — unless `withSpoiler` is given, which means the car itself changed and
+   * every cached angle is stale.
+   */
+  async function renderAngle(index: number, withSpoiler?: boolean) {
     if (!generation.dataUrl) return
-    if (mockup.views[index]?.status === 'done') {
+    const fresh = withSpoiler !== undefined
+    if (!fresh && mockup.views[index]?.status === 'done') {
       setMockup((m) => ({ ...m, open: true, active: index }))
       return
     }
 
-    setMockup((m) => ({ ...m, open: true, active: index, views: { ...m.views, [index]: { status: 'loading' } } }))
+    setMockup((m) => ({
+      ...m,
+      open: true,
+      active: index,
+      views: { ...(fresh ? {} : m.views), [index]: { status: 'loading' } },
+    }))
     try {
       // Show the unwrapped areas in the car's real paint colour rather than as
       // transparency, which the model would otherwise render as holes.
@@ -314,7 +332,12 @@ export default function App() {
 
       const result = await generateImage(
         prefs,
-        buildMockupPrompt({ model, colorName, anglePrompt: VIEW_ANGLES[index].prompt }),
+        buildMockupPrompt({
+          model,
+          colorName,
+          anglePrompt: VIEW_ANGLES[index].prompt,
+          spoiler: fresh ? withSpoiler : spoiler,
+        }),
         // Vehicle reference first: the leading image anchors what is being drawn,
         // and burying it behind the wrap let the model default to a more familiar
         // generation of the same nameplate.
@@ -333,6 +356,13 @@ export default function App() {
         },
       }))
     }
+  }
+
+  function handleSpoilerChange(on: boolean) {
+    if (on === spoiler) return
+    setSpoilerChoice(on)
+    // Re-render what's on screen with the new body; other angles re-render on demand.
+    if (mockup.open) void renderAngle(mockup.active, on)
   }
 
   function handlePreviewOnCar() {
@@ -531,6 +561,8 @@ export default function App() {
           onPreviewOnCar={handlePreviewOnCar}
           onRotateView={handleRotateView}
           hoodRotation={hoodRotation}
+          spoiler={spoiler}
+          onSpoilerChange={handleSpoilerChange}
           onHoodRotation={handleHoodRotation}
         />
 

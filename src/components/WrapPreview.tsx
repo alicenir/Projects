@@ -18,6 +18,9 @@ interface Props {
   onRotateView: (step: number) => void
   hoodRotation: HoodRotation
   onHoodRotation: (degrees: HoodRotation) => void
+  /** Rear spoiler in on-car previews; undefined when the model can't have one. */
+  spoiler: boolean | undefined
+  onSpoilerChange: (on: boolean) => void
 }
 
 export function WrapPreview({
@@ -34,6 +37,8 @@ export function WrapPreview({
   onRotateView,
   hoodRotation,
   onHoodRotation,
+  spoiler,
+  onSpoilerChange,
 }: Props) {
   const busy = state.status === 'loading-concept' || state.status === 'loading-image'
   const view = mockup.views[mockup.active]
@@ -97,6 +102,26 @@ export function WrapPreview({
                   </button>
                 ))}
               </div>
+              {spoiler !== undefined && (
+                <>
+                  <span className="preview-label">
+                    Rear spoiler in car preview{model.spoiler === 'factory' ? ' (factory on this model)' : ''}
+                  </span>
+                  <div className="chip-row small">
+                    {[true, false].map((on) => (
+                      <button
+                        key={String(on)}
+                        type="button"
+                        className={`chip outline ${spoiler === on ? 'selected' : ''}`}
+                        disabled={busyView}
+                        onClick={() => onSpoilerChange(on)}
+                      >
+                        {on ? 'Yes' : 'No'}
+                      </button>
+                    ))}
+                  </div>
+                </>
+              )}
             </div>
           )}
         </div>

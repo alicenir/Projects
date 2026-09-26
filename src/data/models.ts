@@ -14,10 +14,19 @@ export interface TeslaModel {
    * generation dominates their training data — usually the older one.
    */
   renderNotes: string
+  /**
+   * Rear spoiler in on-car previews. 'factory' variants ship with a bare carbon
+   * lip spoiler, so it's on by default; 'optional' can have one added as an
+   * aftermarket part; 'none' has nowhere to fit one (Cybertruck's tonneau).
+   * Tesla's templates have no spoiler panel on any model — it's never wrapped.
+   */
+  spoiler: 'factory' | 'optional' | 'none'
   templateUrl: string
   vehicleImageUrl: string
   repoUrl: string
 }
+
+const FACTORY_SPOILER = new Set(['model3-2024-performance', 'modely-2025-performance', 'models-2025-plaid'])
 
 function model(id: string, name: string, renderNotes: string, subtitle?: string): TeslaModel {
   return {
@@ -25,6 +34,7 @@ function model(id: string, name: string, renderNotes: string, subtitle?: string)
     name,
     subtitle,
     renderNotes,
+    spoiler: id === 'cybertruck' ? 'none' : FACTORY_SPOILER.has(id) ? 'factory' : 'optional',
     templateUrl: `${RAW_BASE}/${id}/template.png`,
     vehicleImageUrl: `${RAW_BASE}/${id}/vehicle_image.png`,
     repoUrl: `https://github.com/teslamotors/custom-wraps/tree/master/${id}`,
