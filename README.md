@@ -140,7 +140,7 @@ The container needs outbound internet access to `api.x.ai` for Grok.
 
 1. In Portainer, go to **Stacks → Add stack**, name it `tesla-wrap-studio`, and choose
    **Repository** as the build method.
-2. **Repository URL**: `https://github.com/alicenir/Projects`
+2. **Repository URL**: `https://github.com/alicenir/homebase`
 3. **Repository reference**: `refs/heads/tesla-wrap-studio` — the production branch
    for this app. Portainer wants the full ref, not just the branch name. (`main` holds
    a different project, so don't point this stack at it.)
